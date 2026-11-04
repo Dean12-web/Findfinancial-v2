@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.grid-bg-light {
+    background-color: #f4f6f9;
+    background-image: radial-gradient(rgba(255, 85, 0, 0.12) 1px, transparent 1px), radial-gradient(rgba(148, 163, 184, 0.25) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: 0 0, 16px 16px;
+}
+
+.dark .grid-bg-light {
+    background-color: #0b0d11;
+    background-image: radial-gradient(rgba(255, 85, 0, 0.15) 1px, transparent 1px), radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: 0 0, 16px 16px;
+}
+
+
+.dark .grid-bg-light {
+    background-color: #0b0d11;
+    background-image: radial-gradient(rgba(255, 85, 0, 0.15) 1px, transparent 1px), radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: 0 0, 16px 16px;
+}
