@@ -115,8 +115,8 @@ protected function casts(): array
 
 **Tujuan & Keuntungan `casts(): array`:**
 
-1. Pencegahan Bug Logika di Frontend: Database MySQL/MariaDB mengembalikan banyak nilai numerik dan boolean sebagai string (contoh: '0', '1', '15000'). Di Vue 3, perbandingan ketat seperti stock === 0 akan bernilai false jika bertipe string. Casting memastikan tipe data murni int, float, atau boolean.
-2. Keamanan Otomatis: Menghindari hashing manual yang rentan terlupakan dengan fitur 'password' => 'hashed'.
+1. Pencegahan Bug Logika di Frontend: Database MySQL/MariaDB mengembalikan banyak nilai numerik dan boolean sebagai string (contoh: ‘0’, ‘1’, ‘15000’). Di Vue 3, perbandingan ketat seperti stock === 0 akan bernilai false jika bertipe string. Casting memastikan tipe data murni int, float, atau boolean.
+2. Keamanan Otomatis: Menghindari hashing manual yang rentan terlupakan dengan fitur ‘password’ => ‘hashed’.
 3. Kemudahan Manipulasi Tanggal: Nilai tanggal langsung menjadi objek Carbon tanpa perlu Carbon::parse() manual.
 
 ### 1.5 Kunci Relasi Non-Standar (`order_id` & `trans_id`)
@@ -1287,7 +1287,7 @@ class StoreOrder extends Model
 }
 ```
 
-### 5.2 `app/Models/Transaction/StoreOrderDetail.php` (`tb_store_order_detail`)
+### Ω5.2 `app/Models/Transaction/StoreOrderDetail.php` (`tb_store_order_detail`)
 
 ```php
 <?php
