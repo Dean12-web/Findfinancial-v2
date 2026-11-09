@@ -13,7 +13,7 @@ class Store extends Model
 {
     protected $table = 'tb_store';
     protected $primaryKey = 'id';
-    public $timestamps = falsse;
+    public $timestamps = false;
     protected $fillable = [
         'store_name',
         'address',

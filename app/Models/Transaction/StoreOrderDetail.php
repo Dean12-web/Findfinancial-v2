@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Transaction;
 
 use App\Models\Catalog\Product;
 use App\Models\Transaction\StoreOrder;

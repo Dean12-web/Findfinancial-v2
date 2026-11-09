@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Contact;
 
 use App\Models\Contact\DepositTransaction;
 use App\Models\Customer\CustomerAddress;
@@ -19,21 +19,23 @@ class Customer extends Model
     protected $primaryKey = 'id';
     public $timestamps = false;
     protected $fillable = [
-        'phone_number',
-        'email',
-        'password',
-        'name',
+        'project_id',
         'level',
-        'born',
+        'name',
+        'email',
+        'phone',
         'address',
         'address_shipment',
+        'password',
+        'points',
+        'deposit',
+        'born',
+        'state',
         'gender',
         'photo',
         'remember_token',
         'firebase_token',
         'token_password',
-        'points',
-        'deposit',
         'referal_code',
         'upline_code',
         'project_id',

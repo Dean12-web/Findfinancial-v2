@@ -5,28 +5,30 @@
 | **Aplikasi Target** | FindFinancial ERP & POS Platform v2 |
 | **Lingkup Modul** | **Daftar & Manajemen Faktur Penjualan (Invoices / Penjualan Module)** |
 | **Rute Legacy CI3** | `$route['invoices']`, `$route['view-data-invoice']`, `$route['view-data-ammount']`, `$route['invoice']` |
-| **Tech Stack Target** | **Backend:** Laravel 12 (PHP 8.2+) dengan Scoped Query & Eloquent<br>**Frontend:** Inertia.js v2 + Vue 3 (Composition API / `<script setup>`) + Tailwind CSS + `@vueuse/core` + `lucide-vue-next`<br>**Basis Data:** Eksisting MariaDB/MySQL (`view_store_order`, `tb_store_order`, `tb_store_order_detail`, `tb_store_order_payment`, `tb_customer`, `tb_store`, `tb_limitation_access`) |
+| **Tech Stack Target** | **Backend:** Laravel 12 (PHP 8.2+) dengan Scoped Query & Eloquent  <br>**Frontend:** Inertia.js v2 + Vue 3 (Composition API / `<script setup>`) + Tailwind CSS + `@vueuse/core` + `lucide-vue-next`  <br>**Basis Data:** Eksisting MariaDB/MySQL (`view_store_order`, `tb_store_order`, `tb_store_order_detail`, `tb_store_order_payment`, `tb_customer`, `tb_store`, `tb_limitation_access`) |
 | **Prinsip Utama** | **Zero Data Loss**, **Eliminasi Rute AJAX Redundan**, **Single-Responsibility Route**, **Multi-Tenant / Multi-Branch Scoping**, **Konsistensi Desain AdminLayout** |
 
----
+ *
 
-## 1. Ringkasan Eksekutif & Pemetaan Arsitektur
+## 1\. Ringkasan Eksekutif & Pemetaan Arsitektur
 
 Pada sistem legacy CodeIgniter 3, pengelolaan faktur penjualan terpecah ke dalam beberapa panggilan AJAX terpisah:
-* Shell HTML dimuat melalui `Invoice::index()`.
-* Agregasi kartu nominal diambil via AJAX `loadAmount` ke `/view-data-ammount`.
-* Data baris tabel ditarik secara client-side via jQuery DataTables ke `/view-data-invoice`.
-* Pengecekan otorisasi dilakukan manual di baris controller membaca tabel `tb_limitation_access`.
+
+*   Shell HTML dimuat melalui `Invoice::index()`.
+*   Agregasi kartu nominal diambil via AJAX `loadAmount` ke `/view-data-ammount`.
+*   Data baris tabel ditarik secara client-side via jQuery DataTables ke `/view-data-invoice`.
+*   Pengecekan otorisasi dilakukan manual di baris controller membaca tabel `tb_limitation_access`.
 
 ### Transformasi pada Laravel 12 + Inertia.js v2:
-1. **Single Entry Point via Inertia Props**: Data tabel dan filter dikirim langsung lewat props paginasi Laravel Eloquent.
-2. **Deferred Metrics (`Inertia::defer`)**: Kartu KPI nominal dihitung di server dan dimuat secara asinkron tanpa memblokir render tabel pertama (*fast First Contentful Paint*).
-3. **Penyelarasan Layout**: Seluruh antarmuka menggunakan komponen pembungkus [`AdminLayout`](resources/js/Layouts/AdminLayout.vue) dengan dukungan tema gelap (*dark mode*) bawaan.
-4. **Tanpa Ketergantungan Eksternal Baru**: Memanfaatkan library yang sudah terpasang di proyek (`@vueuse/core` untuk *debounce* dan `lucide-vue-next` untuk ikon grafis).
 
----
+1. Single Entry Point via Inertia Props: Data tabel dan filter dikirim langsung lewat props paginasi Laravel Eloquent.
+2. Deferred Metrics (Inertia::defer): Kartu KPI nominal dihitung di server dan dimuat secara asinkron tanpa memblokir render tabel pertama (fast First Contentful Paint).
+3. Penyelarasan Layout: Seluruh antarmuka menggunakan komponen pembungkus AdminLayout dengan dukungan tema gelap (dark mode) bawaan.
+4. Tanpa Ketergantungan Eksternal Baru: Memanfaatkan library yang sudah terpasang di proyek (@vueuse/core untuk debounce dan lucide-vue-next untuk ikon grafis).
 
-## 2. Peta Pemetaan Rute
+ *
+
+## 2\. Peta Pemetaan Rute
 
 Berikut pemetaan rute legacy CI3 ke rute Laravel 12 pada file `routes/web.php`:
 
@@ -43,45 +45,63 @@ Berikut pemetaan rute legacy CI3 ke rute Laravel 12 pada file `routes/web.php`:
 | 9 | `delete-invoice` | `admin/Invoice/Delete` | `Route::delete('/invoice/{order_id}', ...)` | `Invoice\InvoiceController@destroy` | Soft delete / pembatalan faktur. |
 | 10 | `invoice-pdf` | `admin/Invoice/Pdf` | `Route::get('/invoice/{order_id}/pdf', ...)` | `Invoice\InvoicePrintController@pdf` | Cetak dokumen PDF Faktur. |
 
----
+ *
 
-## 3. Definisi Model Eloquent Transaksi & Master
+## 3\. Definisi Model Eloquent Transaksi & Master
 
 Struktur tabel database legacy FindFinancial menggunakan awalan `tb_` dan tidak menggunakan kolom timestamps standar Laravel (`created_at`/`updated_at`), sehingga seluruh model wajib menyetel `public $timestamps = false;`.
 
-### 3.1 Model `app/Models/ViewStoreOrder.php` (Read-Optimized untuk Index & Metrik)
+### 3.1 Model `app/Models/Transaction/ViewStoreOrder.php` (Read-Optimized untuk Index & Metrik)
+
 Model ini membaca dari Database View `view_store_order` yang sudah mengagregasikan kolom terhitung `paid` dari tabel pembayaran.
 
 ```php
 <?php
 
-namespace App\Models;
+namespace App\Models\Transaction;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
+use App\Models\Organization\Store;
+use App\Models\Organization\Warehouse;
+use App\Models\Contact\Customer;
 
 class ViewStoreOrder extends Model
 {
     protected $table = 'view_store_order';
     protected $primaryKey = 'id';
     public $timestamps = false;
-    protected $guarded = [];
+    protected $guarded = ['*'];
 
     protected function casts(): array
     {
         return [
-            'total_amount' => 'decimal:2',
-            'paid' => 'decimal:2',
-            'transaction_date' => 'datetime',
+            'id'               => 'integer',
+            'project_id'       => 'integer',
+            'store_id'         => 'integer',
+            'customer_id'      => 'integer',
+            'supplier_id'      => 'integer',
+            'warehouse_id'     => 'integer',
+            'amount'           => 'integer',
+            'discount'         => 'integer',
+            'total_amount'     => 'integer',
+            'poin'             => 'integer',
+            'paid'             => 'float',
+            'shipping_cost'    => 'integer',
             'billing_due_date' => 'date',
-            'created_date' => 'datetime',
+            'shipping_date'    => 'date',
+            'transaction_date' => 'date',
+            'created_date'     => 'datetime',
+            'updated_date'     => 'datetime',
         ];
     }
 
     /**
      * Relasi ke Rincian Item Faktur (menggunakan string order_id)
      */
-    public function details()
+    public function details(): HasMany
     {
         return $this->hasMany(StoreOrderDetail::class, 'store_order_id', 'order_id');
     }
@@ -89,7 +109,7 @@ class ViewStoreOrder extends Model
     /**
      * Relasi ke Riwayat Pembayaran Faktur
      */
-    public function payments()
+    public function payments(): HasMany
     {
         return $this->hasMany(StoreOrderPayment::class, 'store_order_id', 'order_id');
     }
@@ -97,7 +117,7 @@ class ViewStoreOrder extends Model
     /**
      * Relasi ke Master Pelanggan
      */
-    public function customer()
+    public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_id', 'id');
     }
@@ -105,19 +125,27 @@ class ViewStoreOrder extends Model
     /**
      * Relasi ke Master Toko / Cabang
      */
-    public function store()
+    public function store(): BelongsTo
     {
         return $this->belongsTo(Store::class, 'store_id', 'id');
     }
 
     /**
+     * Relasi ke Master Gudang
+     */
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class, 'warehouse_id', 'id');
+    }
+
+    /**
      * Scope Multi-Tenant Sesuai Aturan FindFinancial:
-     * - Staf cabang ('adminbranch'): filter berdasarkan store_id
+     * - Staf cabang ('adminbranch' & 'kasir'): filter berdasarkan store_id
      * - Manajemen/Pusat: filter berdasarkan project_id
      */
     public function scopeRoleFilter(Builder $query, $user): Builder
     {
-        if ($user->role_user === 'adminbranch') {
+        if ($user->role_user === 'adminbranch' || $user->role_user === 'kasir') {
             return $query->where('view_store_order.store_id', $user->store_id)
                          ->where('view_store_order.role_store', 'seller');
         }
@@ -158,20 +186,33 @@ class ViewStoreOrder extends Model
               });
         });
     }
+
+    public function save(array $options = []): bool
+    {
+        throw new \BadMethodCallException('ViewStoreOrder adalah Database View (Read-Only).');
+    }
+
+    public function delete(): ?bool
+    {
+        throw new \BadMethodCallException('ViewStoreOrder adalah Database View (Read-Only).');
+    }
 }
 ```
 
----
+ *
 
-### 3.2 Model `app/Models/StoreOrderDetail.php` (Item Rincian Faktur)
+### 3.2 Model `app/Models/Transaction/StoreOrderDetail.php` (Item Rincian Faktur)
+
 Menyimpan rincian item produk yang dibeli pada setiap faktur pesanan.
 
 ```php
 <?php
 
-namespace App\Models;
+namespace App\Models\Transaction;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Catalog\Product;
 
 class StoreOrderDetail extends Model
 {
@@ -179,23 +220,39 @@ class StoreOrderDetail extends Model
     protected $primaryKey = 'id';
     public $timestamps = false;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'store_order_id',
+        'product_id',
+        'price',
+        'price_buy',
+        'quantity',
+        'discount',
+        'total',
+        'stock_update',
+        'created_date',
+        'updated_date',
+        'updated_by',
+    ];
 
     protected function casts(): array
     {
         return [
-            'price' => 'integer',
-            'price_buy' => 'integer',
-            'quantity' => 'integer',
-            'discount' => 'float',
-            'total' => 'integer',
+            'id'           => 'integer',
+            'product_id'   => 'integer',
+            'price'        => 'integer',
+            'price_buy'    => 'integer',
+            'quantity'     => 'integer',
+            'discount'     => 'integer',
+            'total'        => 'integer',
+            'created_date' => 'datetime',
+            'updated_date' => 'datetime',
         ];
     }
 
     /**
      * Relasi ke Master Produk
      */
-    public function product()
+    public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'product_id', 'id');
     }
@@ -203,24 +260,27 @@ class StoreOrderDetail extends Model
     /**
      * Relasi ke Header Faktur (menggunakan foreign key string order_id)
      */
-    public function order()
+    public function order(): BelongsTo
     {
         return $this->belongsTo(StoreOrder::class, 'store_order_id', 'order_id');
     }
 }
 ```
 
----
+ *
 
-### 3.3 Model `app/Models/StoreOrderPayment.php` (Penerimaan Kas & Pelunasan)
+### 3.3 Model `app/Models/Transaction/StoreOrderPayment.php` (Penerimaan Kas & Pelunasan)
+
 Menyimpan riwayat pelunasan transaksi pesanan dari pelanggan masuk ke rekening/kas bank.
 
 ```php
 <?php
 
-namespace App\Models;
+namespace App\Models\Transaction;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Accounting\Bank;
 
 class StoreOrderPayment extends Model
 {
@@ -228,21 +288,39 @@ class StoreOrderPayment extends Model
     protected $primaryKey = 'id';
     public $timestamps = false;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'store_order_id',
+        'id_bank_destination',
+        'id_bank',
+        'order_id',
+        'amount',
+        'sisa',
+        'notes',
+        'status',
+        'date',
+        'created_at',
+        'updated_at',
+        'updated_by',
+    ];
 
     protected function casts(): array
     {
         return [
-            'amount' => 'integer',
-            'sisa'   => 'integer',
-            'date'   => 'date',
+            'id'                  => 'integer',
+            'id_bank'             => 'integer',
+            'id_bank_destination' => 'integer',
+            'amount'              => 'integer',
+            'sisa'                => 'integer',
+            'date'                => 'date',
+            'created_at'          => 'datetime',
+            'updated_at'          => 'datetime',
         ];
     }
 
     /**
      * Relasi ke Header Faktur
      */
-    public function order()
+    public function order(): BelongsTo
     {
         return $this->belongsTo(StoreOrder::class, 'store_order_id', 'order_id');
     }
@@ -250,7 +328,7 @@ class StoreOrderPayment extends Model
     /**
      * Rekening/Kas Sumber (Asal Pembayar)
      */
-    public function bankSource()
+    public function bank(): BelongsTo
     {
         return $this->belongsTo(Bank::class, 'id_bank', 'id');
     }
@@ -258,24 +336,37 @@ class StoreOrderPayment extends Model
     /**
      * Rekening/Kas Tujuan (Penerima Dana Faktur)
      */
-    public function bankDestination()
+    public function bankDestination(): BelongsTo
     {
         return $this->belongsTo(Bank::class, 'id_bank_destination', 'id');
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->status === 'approved';
     }
 }
 ```
 
----
+ *
 
-### 3.4 Model `app/Models/Customer.php` (Master Pelanggan)
+### 3.4 Model `app/Models/Contact/Customer.php` (Master Pelanggan)
+
 Menyimpan data pembeli/pelanggan yang terhubung dengan faktur transaksi dan deposit.
 
 ```php
 <?php
 
-namespace App\Models;
+namespace App\Models\Contact;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Builder;
+use App\Models\Organization\Project;
+use App\Models\Transaction\StoreOrder;
+use App\Models\Ecommerce\CustomerOrder;
+use App\Models\Promotion\PointTransaction;
 
 class Customer extends Model
 {
@@ -283,28 +374,60 @@ class Customer extends Model
     protected $primaryKey = 'id';
     public $timestamps = false;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'project_id',
+        'level',
+        'name',
+        'email',
+        'phone',
+        'address',
+        'address_shippment',
+        'password',
+        'points',
+        'deposit',
+        'born',
+        'state',
+        'created_at',
+    ];
 
     protected function casts(): array
     {
         return [
-            'points'  => 'integer',
-            'deposit' => 'float',
+            'id'                => 'integer',
+            'address_shippment' => 'integer',
+            'points'            => 'integer',
+            'deposit'           => 'integer',
+            'project_id'        => 'integer',
+            'born'              => 'datetime',
+            'created_at'        => 'datetime',
         ];
     }
 
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class, 'project_id', 'id');
+    }
+
     /**
-     * Riwayat Seluruh Transaksi Faktur Pelanggan
+     * Riwayat Seluruh Transaksi Faktur Toko Pelanggan
      */
-    public function orders()
+    public function orders(): HasMany
     {
         return $this->hasMany(StoreOrder::class, 'customer_id', 'id');
     }
 
     /**
+     * Riwayat Pesanan Daring Customer (E-Commerce)
+     */
+    public function onlineOrders(): HasMany
+    {
+        return $this->hasMany(CustomerOrder::class, 'customer_id', 'id');
+    }
+
+    /**
      * Buku Alamat Pengiriman Pelanggan
      */
-    public function addresses()
+    public function addresses(): HasMany
     {
         return $this->hasMany(CustomerAddress::class, 'customer_id', 'id');
     }
@@ -312,25 +435,54 @@ class Customer extends Model
     /**
      * Mutasi Saldo Deposit Belanja Pelanggan
      */
-    public function depositTransactions()
+    public function depositTransactions(): HasMany
     {
         return $this->hasMany(DepositTransaction::class, 'id_user', 'id')
-                    ->where('role_user', 'customer');
+                    ->where('role_user', 'CUSTOMER');
+    }
+
+    /**
+     * Mutasi Saldo Poin Pelanggan
+     */
+    public function pointTransactions(): HasMany
+    {
+        return $this->hasMany(PointTransaction::class, 'memberid', 'id');
+    }
+
+    public function isGrosir(): bool
+    {
+        return $this->level === 'Grosir';
+    }
+
+    public function isMember(): bool
+    {
+        return $this->level === 'Member';
+    }
+
+    public function scopeForProject(Builder $query, int $projectId): Builder
+    {
+        return $query->where('project_id', $projectId);
     }
 }
 ```
 
----
+ *
 
-### 3.5 Model `app/Models/Store.php` (Master Cabang Toko)
+### 3.5 Model `app/Models/Organization/Store.php` (Master Cabang Toko)
+
 Menyimpan data cabang toko tempat transaksi kasir dan pesanan berlangsung.
 
 ```php
 <?php
 
-namespace App\Models;
+namespace App\Models\Organization;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Transaction\StoreOrder;
+use App\Models\Accounting\Bank;
+use App\Models\Accounting\Expense;
 
 class Store extends Model
 {
@@ -338,11 +490,22 @@ class Store extends Model
     protected $primaryKey = 'id';
     public $timestamps = false;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'store_name',
+        'address',
+        'region_id',
+        'project_id',
+        'created_date',
+        'updated_date',
+        'updated_by',
+    ];
 
     protected function casts(): array
     {
         return [
+            'id'           => 'integer',
+            'region_id'    => 'integer',
+            'project_id'   => 'integer',
             'created_date' => 'datetime',
             'updated_date' => 'datetime',
         ];
@@ -351,50 +514,66 @@ class Store extends Model
     /**
      * Entitas Bisnis / Tenant Induk
      */
-    public function project()
+    public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class, 'project_id', 'id');
     }
 
     /**
+     * Gudang Penyimpanan Barang yang Terhubung ke Cabang
+     */
+    public function warehouses(): HasMany
+    {
+        return $this->hasMany(Warehouse::class, 'store_id', 'id');
+    }
+
+    /**
+     * Akun Pengguna yang Bertugas di Cabang Toko Ini
+     */
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class, 'store_id', 'id');
+    }
+
+    /**
      * Seluruh Faktur Penjualan Cabang
      */
-    public function orders()
+    public function orders(): HasMany
     {
         return $this->hasMany(StoreOrder::class, 'store_id', 'id');
     }
 
     /**
-     * Gudang Penyimpanan Barang yang Terhubung ke Cabang
+     * Pos Rekening Kas Cabang
      */
-    public function warehouses()
+    public function banks(): HasMany
     {
-        return $this->hasMany(Warehouse::class, 'store_id', 'id');
+        return $this->hasMany(Bank::class, 'store_id', 'id');
+    }
+
+    /**
+     * Biaya Operasional Toko
+     */
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class, 'store_id', 'id');
     }
 }
 ```
 
----
+ *
 
 ### 3.6 Catatan Khusus Relasi & Arsitektur Model
 
-1. **Foreign Key `order_id` (String):**
-   Pada tabel `tb_store_order_detail` dan `tb_store_order_payment`, kolom foreign key adalah `store_order_id` yang mereferensikan string kode faktur (`order_id`, misal: `ORD-202610-0012`), **bukan** integer kolom `id`. Oleh karena itu, relasi selalu mendefinisikan owner/local key secara eksplisit:
-   ```php
-   // Dari Detail/Payment ke Order:
-   $this->belongsTo(StoreOrder::class, 'store_order_id', 'order_id');
+1. Foreign Key order_id (String):Pada tabel tb_store_order_detail dan tb_store_order_payment, kolom foreign key adalah store_order_id yang mereferensikan string kode faktur (order_id, misal: ORD-202610-0012), bukan integer kolom id. Oleh karena itu, relasi selalu mendefinisikan owner/local key secara eksplisit:PHP▾📋 Copy// Dari Detail/Payment ke Order:
+$this->belongsTo(StoreOrder::class, 'store_order_id', 'order_id');
 
-   // Dari ViewStoreOrder ke Detail/Payment:
-   $this->hasMany(StoreOrderDetail::class, 'store_order_id', 'order_id');
-   $this->hasMany(StoreOrderPayment::class, 'store_order_id', 'order_id');
-   ```
+// Dari ViewStoreOrder ke Detail/Payment:
+$this->hasMany(StoreOrderDetail::class, 'store_order_id', 'order_id');
+$this->hasMany(StoreOrderPayment::class, 'store_order_id', 'order_id');
+2. Model Domain Modular:Sesuai panduan_model.md, seluruh model telah dipetakan ke dalam domain namespace modular:App\Models\Transaction (StoreOrder, StoreOrderDetail, StoreOrderPayment, ViewStoreOrder)App\Models\Organization (Store, Warehouse, Project, User, LimitationAccess)App\Models\Contact (Customer, Contact, CustomerAddress, DepositTransaction)App\Models\Catalog (Product, ProductDetail, ProductPrice, ProductStock)App\Models\Accounting (Bank, CashTransaction, Expense, ExpenseDetail)Setiap pemanggilan relasi lintas domain wajib menyertakan pernyataan use yang tepat untuk menghindari error Class Not Found.
 
-2. **Model Pendukung Lainnya:**
-   Class `Product`, `Bank`, `StoreOrder`, `CustomerAddress`, `DepositTransaction`, `Project`, dan `Warehouse` dipanggil oleh relasi di atas. Pastikan class-class tersebut dibuat atau di-*mock* ketika Anda memanggil eager loading `with(...)` agar tidak memicu error `Class Not Found`. Untuk tampilan index daftar faktur, cukup model `Customer` dan `Store` yang aktif di-*eager load*.
-
----
-
-## 4. Backend Controller: `app/Http/Controllers/Invoice/InvoiceController.php`
+## 4\. Backend Controller: `app/Http/Controllers/Invoice/InvoiceController.php`
 
 Controller diletakkan di dalam sub-folder `app/Http/Controllers/Invoice/InvoiceController.php`:
 
@@ -404,8 +583,8 @@ Controller diletakkan di dalam sub-folder `app/Http/Controllers/Invoice/InvoiceC
 namespace App\Http\Controllers\Invoice;
 
 use App\Http\Controllers\Controller;
-use App\Models\ViewStoreOrder;
-use App\Models\Bank;
+use App\Models\Transaction\ViewStoreOrder;
+use App\Models\Accounting\Bank;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -417,7 +596,7 @@ class InvoiceController extends Controller
      */
     public function index(Request $request): Response
     {
-        $user = $request->user();
+       ; $user = $request->user();
 
         // Validasi kolom sorting yang diizinkan (mencegah SQL Injection)
         $allowedColumns = [
@@ -519,9 +698,9 @@ class InvoiceController extends Controller
 }
 ```
 
----
+ *
 
-## 5. Frontend Vue: `resources/js/Pages/Invoice/Invoice.vue`
+## 5\. Frontend Vue: `resources/js/Pages/Invoice/Invoice.vue`
 
 Gunakan `useDebounceFn` dari paket `@vueuse/core` (sudah terpasang di proyek) dan bungkus dengan `AdminLayout`:
 
@@ -829,11 +1008,11 @@ watch(search, () => applyFilter());
 </template>
 ```
 
----
+ *
 
-## 6. Otorisasi Hak Akses Modul Penjualan
+## 6\. Otorisasi Hak Akses Modul Penjualan
 
-Aplikasi FindFinancial v2 sudah memiliki model [`LimitationAccess`](app/Models/LimitationAccess.php) dan relasi pada [`User`](app/Models/User.php). Pengecekan hak akses tidak perlu kueri manual mentah, melainkan menggunakan Middleware berikut:
+Aplikasi FindFinancial v2 sudah memiliki model [`LimitationAccess`](app/Models/Organization/LimitationAccess.php) dan relasi pada [`User`](app/Models/Organization/User.php). Pengecekan hak akses tidak perlu kueri manual mentah, melainkan menggunakan Middleware berikut:
 
 ### Middleware `app/Http/Middleware/EnsureUserHasInvoiceAccess.php`
 
@@ -881,17 +1060,17 @@ Route::middleware(['auth', EnsureUserHasInvoiceAccess::class])->group(function (
 });
 ```
 
----
+ *
 
-## 7. Checklist Pengujian & Verifikasi
+## 7\. Checklist Pengujian & Verifikasi
 
 Sebelum modul dijalankan di lingkungan staging/production:
 
 - [ ] **Aksesibilitas Rute**: Rute `/invoice` terbuka tanpa error 404/500 dan memuat layout `AdminLayout`.
 - [ ] **Otorisasi Hak Akses**: Pengguna tanpa izin `invoice` diarahkan kembali ke Dashboard dengan flash message error.
 - [ ] **Multi-Branch Isolation**:
-  - Akun cabang (`adminbranch`) hanya melihat faktur dengan `store_id` miliknya.
-  - Akun pusat/superadmin melihat faktur dalam lingkup `project_id`.
+*   Akun cabang (`adminbranch`) hanya melihat faktur dengan `store_id` miliknya.
+*   Akun pusat/superadmin melihat faktur dalam lingkup `project_id`.
 - [ ] **Debounced Search**: Pencarian teks menggunakan `useDebounceFn` bekerja halus tanpa *request spamming*.
 - [ ] **Filter Status Interaktif**: Klik pada kartu KPI *OPEN* atau *OVERDUE* langsung memfilter data tabel secara instan via Inertia Visitor tanpa *full page reload*.
 - [ ] **Konsistensi UI/UX**: Format nominal menggunakan Rupiah (`Rp`), tema *dark mode* dan *light mode* kontras sempurna, dan ikon grafis SVG tampil utuh.

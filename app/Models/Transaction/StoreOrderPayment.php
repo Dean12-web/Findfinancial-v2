@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Transaction;
 
 use App\Models\Accounting\Bank;
 use App\Models\Transaction\StoreOrder;

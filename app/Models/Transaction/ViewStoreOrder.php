@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Transaction;
 
+use App\Models\Contact\Customer;
 use App\Models\Organization\Store;
 use App\Models\Organization\Warehouse;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,7 +15,7 @@ class ViewStoreOrder extends Model
     protected $table = 'view_store_order';
     protected $primaryKey = 'id';
     public $timestamps = false;
-    protected $guarded = [];
+    protected $guarded = ['*'];
     protected function casts(): array
     {
         return [
@@ -66,6 +67,39 @@ class ViewStoreOrder extends Model
         return $query->where('view_store_order.project_id', $user->project_id)
             ->where('view_store_order.role_project', 'seller');
     }
+    /**
+     * Scope Filter Status Transaksi (OPEN / PAID / OVERDUE)
+     */
+    public function scopeFilterStatus(Builder $query, ?string $status): Builder
+    {
+        if (!empty($status)) {
+            $query->where('view_store_order.status', strtoupper($status));
+        }
+
+        return $query;
+    }
+
+    /**
+     * Scope Pencarian Multi-Kolom
+     */
+    public function scopeSearch(Builder $query, ?string $keyword): Builder
+    {
+        if (empty($keyword)) {
+            return $query;
+        }
+
+        return $query->where(function (Builder $q) use ($keyword) {
+            $q->where('view_store_order.order_id', 'LIKE', "%{$keyword}%")
+                ->orWhere('view_store_order.tags', 'LIKE', "%{$keyword}%")
+                ->orWhereHas('customer', function ($c) use ($keyword) {
+                    $c->where('name', 'LIKE', "%{$keyword}%");
+                })
+                ->orWhereHas('store', function ($s) use ($keyword) {
+                    $s->where('store_name', 'LIKE', "%{$keyword}%");
+                });
+        });
+    }
+
     public function save(array $options = []): bool
     {
         throw new \BadMethodCallException('ViewStoreOrder adalah database view (Readonly)');
