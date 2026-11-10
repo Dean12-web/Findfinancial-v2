@@ -40,6 +40,7 @@ class HandleInertiaRequests extends Middleware
                     'role_user' => $user->role_user,
                     'store_id' => $user->store_id,
                     'project_id' => $user->project_id,
+                    'can_bypass_date' => (bool) $user->can_bypass_date,
                     'permissions' => $user->limitationAccess ? [
                         'bank' => $user->limitationAccess->canAccess('bank'),
                         'purchase' => $user->limitationAccess->canAccess('purchase'),
@@ -69,6 +70,8 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn() => $request->session()->get('success'),
                 'error' => fn() => $request->session()->get('error'),
+                'create_order_id' => fn() => $request->session()->get('create_order_id'),
+                'completedOrder' => fn() => $request->session()->get('completedOrder'),
             ],
         ];
     }
