@@ -89,6 +89,18 @@ class User extends Authenticatable
         return $this->role_user === 'cashier';
     }
 
+    /**
+     * Memeriksa apakah user memiliki hak akses ke salah satu modul yang diberikan.
+     */
+    public function canAccess(string ...$modules): bool
+    {
+        if ($this->isSuperadmin()) {
+            return true;
+        }
+
+        return collect($modules)->some(fn($module) => $this->limitationAccess?->canAccess($module) ?? false);
+    }
+
     // Query Scopes
     public function scopeForProject(Builder $query, int $projectId): Builder
     {

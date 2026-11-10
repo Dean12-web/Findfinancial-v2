@@ -54,16 +54,27 @@ class InvoiceController extends Controller
 
     protected function getInvoicesMetrics($user): array
     {
-        $summary = ViewStoreOrder::query()
-            ->roleFilter($user)
-            ->selectRaw("
-                SUM(CASE WHEN status = 'OPEN' THEN (total_amount - paid) ELSE 0 END) as open_amount,
-                SUM(CASE WHEN status = 'OPEN' THEN 1 ELSE 0 END) as open_count,
-                SUM(CASE WHEN status = 'OVERDUE' THEN (total_amount - paid) ELSE 0 END) as overdue_amount,
-                SUM(CASE WHEN status = 'OVERDUE' THEN 1 ELSE 0 END) as overdue_count,
+        $canAccessBank = $user->canAccess('bank');
+
+        $query = "
+            SUM(CASE WHEN status = 'OPEN' THEN (total_amount - paid) ELSE 0 END) as open_amount,
+            SUM(CASE WHEN status = 'OPEN' THEN 1 ELSE 0 END) as open_count,
+            SUM(CASE WHEN status = 'OVERDUE' THEN (total_amount - paid) ELSE 0 END) as overdue_amount,
+            SUM(CASE WHEN status = 'OVERDUE' THEN 1 ELSE 0 END) as overdue_count
+        ";
+
+        if ($canAccessBank) {
+            $query .= ",
                 SUM(CASE WHEN status = 'PAID' THEN paid ELSE 0 END) as paid_amount,
                 SUM(CASE WHEN status = 'PAID' THEN 1 ELSE 0 END) as paid_count
-            ")->first();
+            ";
+        }
+
+        $summary = ViewStoreOrder::query()
+            ->roleFilter($user)
+            ->selectRaw($query)
+            ->first();
+
         return [
             'open' => [
                 'amount' => (float) ($summary->open_amount ?? 0),
@@ -73,19 +84,19 @@ class InvoiceController extends Controller
                 'amount' => (float) ($summary->overdue_amount ?? 0),
                 'count' => (int) ($summary->overdue_count ?? 0),
             ],
-            'paid' => [
+            'paid' => $canAccessBank ? [
                 'amount' => (float) ($summary->paid_amount ?? 0),
                 'count' => (int) ($summary->paid_count ?? 0),
-            ],
+            ] : null,
         ];
     }
 
-    public function show(Request $request, string $oder_id): Response
+    public function show(Request $request, string $order_id): Response
     {
         $user = $request->user();
         $invoice = ViewStoreOrder::query()
             ->roleFilter($user)
-            ->where('order_id', $oder_id)
+            ->where('order_id', $order_id)
             ->with([
                 'details.product',
                 'payments.bankDestination',

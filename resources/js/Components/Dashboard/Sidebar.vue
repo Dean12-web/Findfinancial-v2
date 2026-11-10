@@ -29,24 +29,94 @@ import {
 import logoImg from '../../../images/ff.png';
 import { computed } from 'vue';
 
-
 defineProps({
     isOpen: { type: Boolean, default: true }
 });
 
 const emit = defineEmits(['close']);
 const page = usePage();
-const user = computed(() => page.props.auth.user);
-
-const isCurrent = (path) => page.url === path || page.url.startsWith(path + '/');
-
+const user = computed(() => page.props.auth?.user);
 
 const can = (...permissions) => {
     if (user.value?.role_user === 'superadmin') return true;
     return permissions.some(p => user.value?.permissions?.[p] === true);
 };
 
+const isActive = (path) => {
+    if (!path || path === '#') return false;
+    if (path === '/' || path === '/dashboard') {
+        return page.url === '/' || page.url === '/dashboard' || page.url.startsWith('/dashboard');
+    }
+    return page.url === path || page.url.startsWith(path + '/');
+};
 
+const menuGroups = [
+    {
+        title: null,
+        items: [
+            { label: 'Ringkasan', href: '/', icon: LayoutDashboard, permission: 'dashboard' },
+            { label: 'Project', href: '#', icon: Home, permission: 'project' },
+            { label: 'Admin', href: '#', icon: UserCircle, permission: 'admin' },
+            { label: 'Akses Pengguna', href: '#', icon: Box, permission: 'access_user' },
+        ]
+    },
+    {
+        title: 'Keuangan',
+        items: [
+            { label: 'Kas & Bank', href: '#', icon: IdCard, permission: 'bank' },
+            { label: 'Laporan Keuangan', href: '#', icon: ChartNoAxesColumnIncreasing, permission: 'bank' },
+            { label: 'Laporan Laba Rugi', href: '#', icon: ChartColumnIncreasing, permission: 'bank' },
+            { label: 'Deposit', href: '#', icon: Landmark, permission: 'deposit' },
+            { label: 'Daftar Akun', href: '#', icon: SquareCheck, permission: 'cost_account' },
+        ]
+    },
+    {
+        title: 'Transaksi',
+        items: [
+            { label: 'Penjualan', href: '/invoice', icon: CircleDollarSign, permission: 'invoice' },
+            { label: 'Kasir POS', href: '/pos', icon: Barcode, permission: 'invoice' },
+            { label: 'Pembelian', href: '/purchase', icon: ShoppingCart, permission: 'purchase' },
+            { label: 'Biaya', href: '/expenses', icon: Notebook, permission: 'expenses' },
+        ]
+    },
+    {
+        title: 'Aset',
+        items: [
+            { label: 'Produk', href: '#', icon: Package, permission: 'product' },
+            { label: 'Kategori Produk', href: '#', icon: Package2Icon, permission: 'product' },
+            { label: 'Konversi / Rakit Produk', href: '#', icon: Toolbox, permission: 'product' },
+            { label: 'Toko', href: '#', icon: Store, permission: 'store' },
+            { label: 'Kontak', href: '#', icon: Contact2, permission: 'contact' },
+        ]
+    },
+    {
+        title: 'Pengguna (Admin & Kasir Cabang)',
+        permission: 'user',
+        items: [
+            { label: 'Pengguna', href: '#', icon: User, permission: 'user' },
+        ]
+    },
+    {
+        title: 'Lainnya',
+        permission: 'user',
+        items: [
+            { label: 'Tags', href: '#', icon: TagsIcon, permission: 'tags' },
+            { label: 'Customer', href: '#', icon: Users, permission: 'user' },
+        ]
+    },
+    {
+        title: 'My Florean',
+        items: [
+            { label: 'My Florean', href: '#', icon: Flower, permission: null },
+        ]
+    },
+    {
+        title: 'Florean Marketplace',
+        items: [
+            { label: 'Florean Marketplace', href: '#', icon: Star, permission: null },
+        ]
+    }
+];
 </script>
 
 <template>
@@ -56,7 +126,7 @@ const can = (...permissions) => {
     ]">
 
         <!-- Header -->
-        <div class="h-16 flex items-center justify-between gap-3 px-4 bg-[#0a0c0e]/80 border-b border-[#232731]">
+        <div class="h-16 flex items-center justify-between gap-3 px-4 bg-[#0a0c0e]/80 border-b border-[#232731] shrink-0">
             <Link href="/" class="flex items-center min-w-0 py-1 focus:outline-none">
                 <img :src="logoImg" alt="FindFinancial" class="h-13 max-w-[200px] w-auto object-contain shrink-0" />
             </Link>
@@ -68,196 +138,64 @@ const can = (...permissions) => {
         </div>
 
         <!-- Nav Menu -->
-        <nav class="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
-            <div class="space-y-1">
-                <Link v-if="can('dashboard')" href="/" :class="[
-                    'flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all',
-                    isCurrent('/dashboard') || isCurrent('/')
-                        ? 'bg-[#ff5500] text-white shadow-md shadow-[#ff5500]/25'
-                        : 'text-slate-300 hover:bg-[#16191f] hover:text-white group'
-                ]">
-                    <LayoutDashboard class="w-4 h-4 shrink-0" />
-                    <span>Ringkasan</span>
-                </Link>
-                <Link v-if="can('project')" href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <Home class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Project</span>
-                </Link>
-                <Link v-if="can('admin')" href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <UserCircle class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Admin</span>
-                </Link>
-                <Link v-if="can('access_user')" href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <Box class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Akses Pengguna</span>
-                </Link>
-            </div>
-            <!-- Group Keuangan -->
-            <div class="space-y-1">
-                <div class="px-3 pb-2 pt-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Keuangan
+        <nav class="flex-1 pl-3 pr-0 py-4 space-y-4 overflow-y-auto overflow-x-hidden">
+            <template v-for="(group, gIdx) in menuGroups" :key="gIdx">
+                <div v-if="!group.permission || can(group.permission)" class="space-y-1">
+                    <div v-if="group.title" class="px-3 pb-2 pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                        {{ group.title }}
+                    </div>
+
+                    <template v-for="item in group.items" :key="item.label">
+                        <Link
+                            v-if="!item.permission || can(item.permission)"
+                            :href="item.href"
+                            :class="[
+                                'relative flex items-center gap-2.5 px-3 py-2.5 text-xs transition-all select-none',
+                                isActive(item.href)
+                                    ? 'bg-[#ff5500] text-white font-bold rounded-l-2xl mr-0 -mr-[1px] z-10 shadow-md shadow-[#ff5500]/25'
+                                    : 'text-slate-400 hover:bg-[#16191f]/50 hover:text-white font-medium rounded-lg mr-3 group'
+                            ]"
+                        >
+                            <!-- Top Right Concave Curve -->
+                            <svg
+                                v-if="isActive(item.href)"
+                                class="absolute -top-4 -right-[1px] w-4 h-4 pointer-events-none text-[#ff5500]"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                            >
+                                <path d="M0 16 A 16 16 0 0 0 16 0 V 16 H 0 Z" fill="currentColor" />
+                            </svg>
+
+                            <!-- Bottom Right Concave Curve -->
+                            <svg
+                                v-if="isActive(item.href)"
+                                class="absolute -bottom-4 -right-[1px] w-4 h-4 pointer-events-none text-[#ff5500]"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                            >
+                                <path d="M0 0 A 16 16 0 0 1 16 16 V 0 H 0 Z" fill="currentColor" />
+                            </svg>
+
+                            <component
+                                :is="item.icon"
+                                :class="[
+                                    'w-4 h-4 shrink-0 transition-colors',
+                                    isActive(item.href) ? 'text-white' : 'text-slate-500 group-hover:text-slate-300'
+                                ]"
+                            />
+                            <span class="truncate">{{ item.label }}</span>
+                        </Link>
+                    </template>
                 </div>
-                <Link v-if="can('bank')" href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <IdCard class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Kas & Bank</span>
-                </Link>
-
-                <Link v-if="can('bank')" href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <ChartNoAxesColumnIncreasing class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Laporan Keuangan</span>
-                </Link>
-
-                <Link v-if="can('bank')" href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <ChartColumnIncreasing class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Laporan Laba Rugi</span>
-                </Link>
-                <Link v-if="can('deposit')" href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <Landmark class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Deposit</span>
-                </Link>
-                <Link v-if="can('cost_account')" href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <SquareCheck class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Daftar Akun</span>
-                </Link>
-            </div>
-            <!-- Group Transaksi -->
-            <div class="space-y-1">
-                <div class="px-3 pb-2 pt-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Transaksi
-                </div>
-                <Link v-if="can('invoice')" href="/invoice"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <CircleDollarSign class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Penjualan</span>
-                </Link>
-
-                <Link v-if="can('invoice')" href="/pos"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <Barcode class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Kasir POS</span>
-                </Link>
-
-                <Link v-if="can('purchase')" href="/purchase"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <ShoppingCart class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Pembelian</span>
-                </Link>
-                <Link v-if="can('expenses')" href="/expenses"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <Notebook class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Biaya</span>
-                </Link>
-            </div>
-
-            <!-- Group Aset -->
-            <div class="space-y-1">
-                <div class="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Aset
-                </div>
-
-                <Link v-if="can('product')" href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <Package class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Produk</span>
-                </Link>
-
-                <Link v-if="can('product')" href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <Package2Icon class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Kategori Produk</span>
-                </Link>
-
-                <Link v-if="can('product')" href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <Toolbox class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Konversi / Rakit Produk</span>
-                </Link>
-
-                <Link v-if="can('store')" href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <Store class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Toko</span>
-                </Link>
-                <Link v-if="can('contact')" href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <Contact2 class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Kontak</span>
-                </Link>
-            </div>
-
-            <!-- Group Pengguna -->
-            <div v-if="can('user')" class="space-y-1">
-                <div class="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Pengguna (Admin & Kasir Cabang)
-                </div>
-
-                <Link v-if="can('user')" href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <User class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Pengguna</span>
-                </Link>
-            </div>
-
-            <!-- Group Other -->
-            <div v-if="can('user')" class="space-y-1">
-                <div class="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Lainnya
-                </div>
-
-                <Link v-if="can('tags')" href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <TagsIcon class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Tags</span>
-                </Link>
-                <Link v-if="can('user')" href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <Users class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Customer</span>
-                </Link>
-
-            </div>
-
-            <!-- My Florean -->
-            <div class="space-y-1">
-                <div class="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    My Florean
-                </div>
-
-                <Link href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <Flower class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>My Florean</span>
-                </Link>
-            </div>
-
-            <!-- Florean Marketplace -->
-            <div class="space-y-1">
-                <div class="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Florean Marketplace
-                </div>
-
-                <Link href="#"
-                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:bg-[#16191f] hover:text-white transition-colors font-medium text-xs group">
-                    <Star class="w-4 h-4 text-slate-400 group-hover:text-white shrink-0" />
-                    <span>Florean Marketplace</span>
-                </Link>
-            </div>
+            </template>
         </nav>
 
         <!-- Footer Sistem -->
-        <div class="p-3 bg-[#0a0c0e]/80 border-t border-[#232731]">
+        <div class="p-3 bg-[#0a0c0e]/80 border-t border-[#232731] shrink-0">
             <div class="flex items-center justify-between px-2 py-1 text-slate-400">
                 <div class="flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span class="text-[11px] font-medium text-slate-300">{{ user.name }}</span>
+                    <span class="text-[11px] font-medium text-slate-300">{{ user?.name || 'User' }}</span>
                 </div>
                 <span class="text-[10px] font-mono text-slate-500">v2.00</span>
             </div>

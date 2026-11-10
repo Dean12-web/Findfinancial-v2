@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
 import {
     TrendingUp,
     BadgeCheck,
@@ -25,6 +25,14 @@ import {
     Split
 } from 'lucide-vue-next';
 import { useDebounceFn } from '@vueuse/core';
+
+const page = usePage();
+const user = computed(() => page.props.auth?.user);
+
+const can = (...permissions) => {
+    if (user.value?.role_user === 'superadmin') return true;
+    return permissions.some(p => user.value?.permissions?.[p] === true);
+};
 // props 
 const props = defineProps({
     invoices: {
@@ -108,52 +116,101 @@ watch(search, () => applyFilter());
                 </div>
             </div>
 
-            <!-- KPI Grid (2 Grid Responsif) -->
-            <section class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- KPI Grid (Responsif & Luas, Kartu 3 Khusus Izin 'bank') -->
+            <section :class="['grid grid-cols-1 gap-4 lg:gap-5', can('bank') ? 'md:grid-cols-2 xl:grid-cols-3' : 'sm:grid-cols-2']">
                 <!-- KPI 1: Penjualan Belum Dibayar -->
-                <div @click="setStatusFilter('OPEN')"
-                    :class="['bg-white dark:bg-[#16191f] border border-slate-200 dark:border-[#232731] rounded-xl p-4 xl:p-5 shadow-xs flex flex-col justify-between transition-colors cursor-pointer', currentStatus === 'OPEN' ? 'border-[#ff5500] ring-1 ring-[#ff5500]' : 'border-slate-200 dark:border-[#232731] hover:border-slate-300 dark:hover:border-slate-700']">
-                    <div class="flex items-start justify-between gap-2">
-                        <div class="min-w-0">
-                            <div
-                                class="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-1 tracking-tight font-mono">
-                                {{ metrics ? formatRupiah(metrics.open.amount) : 'Memuat...' }}
-                            </div>
+                <div @click="setStatusFilter('OPEN')" :class="['bg-white dark:bg-[#16191f] border rounded-xl p-4 sm:p-5 shadow-xs flex flex-col justify-between transition-all cursor-pointer',
+                    currentStatus === 'OPEN' ? 'border-[#ff5500] ring-1 ring-[#ff5500] shadow-sm' : 'border-slate-200 dark:border-[#232731] hover:border-slate-300 dark:hover:border-slate-700'
+                ]">
+                    <div>
+                        <!-- Header Card: Label & Badge Transaksi -->
+                        <div class="flex items-center justify-between gap-2.5">
+                            <span
+                                class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">
+                                Belum Dibayar (OPEN)
+                            </span>
+                            <span
+                                class="inline-flex items-center gap-1.5 bg-amber-50 dark:bg-[#ffb800]/10 text-amber-700 dark:text-[#ffb800] border border-amber-200 dark:border-[#ffb800]/30 px-2.5 py-1 rounded-md text-xs font-semibold shrink-0 whitespace-nowrap shadow-2xs">
+                                <TrendingUp class="w-3.5 h-3.5 shrink-0" />
+                                {{ metrics ? `${metrics.open.count} Transaksi` : '...' }}
+                            </span>
                         </div>
-                        <span
-                            class="inline-flex items-center gap-1 bg-[#00e599]/10 text-[#00a36d] dark:text-[#00e599] border border-[#00e599]/30 px-2 py-0.5 rounded-md text-xs font-semibold shrink-0">
-                            <TrendingUp class="w-3.5 h-3.5" />
-                            {{ metrics ? `${metrics.open.count} Transaksi` : '...' }}
-                        </span>
+                        <!-- Nilai Nominal Full Width -->
+                        <div
+                            class="mt-3 text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight font-mono">
+                            {{ metrics ? formatRupiah(metrics.open.amount) : 'Memuat...' }}
+                        </div>
                     </div>
+
+                    <!-- Footer Card -->
                     <div
-                        class="flex items-center justify-between mt-4 pt-2 border-t border-slate-100 dark:border-[#232731] gap-2">
-                        <div class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
-                            Penjualan Belum Dibayar (OPEN)
-                        </div>
+                        class="mt-4 pt-2.5 border-t border-slate-100 dark:border-[#232731] flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
+                        <span>Tagihan Aktif</span>
+                        <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400">Filter Status</span>
                     </div>
                 </div>
 
                 <!-- KPI 2: Penjualan Jatuh Tempo -->
-                <div @click="setStatusFilter('OVERDUE')" :class="['bg-white dark:bg-[#16191f] border border-slate-200 dark:border-[#232731] rounded-xl p-4 xl:p-5 shadow-xs flex flex-col justify-between transition-colors cursor-pointer',
-                    currentStatus === 'OVERDUE' ? 'border-rose-500 ring-1 ring-rose-500' : 'border-slate-200 dark:border-[#232731] hover:border-slate-300 dark:hover:border-slate-700 '
+                <div @click="setStatusFilter('OVERDUE')" :class="['bg-white dark:bg-[#16191f] border rounded-xl p-4 sm:p-5 shadow-xs flex flex-col justify-between transition-all cursor-pointer',
+                    currentStatus === 'OVERDUE' ? 'border-rose-500 ring-1 ring-rose-500 shadow-sm' : 'border-slate-200 dark:border-[#232731] hover:border-slate-300 dark:hover:border-slate-700'
                 ]">
-                    <div class="flex items-start justify-between gap-2">
-                        <div class="min-w-0">
-                            <div
-                                class="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-1 tracking-tight font-mono">
-                                {{ metrics ? formatRupiah(metrics.overdue.amount) : 'Memuat...' }}
-                            </div>
+                    <div>
+                        <!-- Header Card: Label & Badge Transaksi -->
+                        <div class="flex items-center justify-between gap-2.5">
+                            <span
+                                class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">
+                                Jatuh Tempo (OVERDUE)
+                            </span>
+                            <span
+                                class="inline-flex items-center gap-1.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-400 px-2.5 py-1 rounded-md text-xs font-semibold shrink-0 whitespace-nowrap shadow-2xs">
+                                <BadgeCheck class="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                {{ metrics ? `${metrics.overdue.count} Transaksi` : '...' }}
+                            </span>
                         </div>
-                        <span
-                            class="inline-flex items-center gap-1 bg-slate-100 dark:bg-[#1c2027] border border-slate-200 dark:border-[#232731] text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md text-xs font-medium shrink-0">
-                            <BadgeCheck class="w-3.5 h-3.5 text-[#00e599]" />
-                            {{ metrics ? `${metrics.overdue.count} Transaksi` : '...' }}
-                        </span>
+                        <!-- Nilai Nominal Full Width -->
+                        <div
+                            class="mt-3 text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight font-mono">
+                            {{ metrics ? formatRupiah(metrics.overdue.amount) : 'Memuat...' }}
+                        </div>
                     </div>
+
+                    <!-- Footer Card -->
                     <div
-                        class="flex items-center justify-between mt-4 pt-2 border-t border-slate-100 dark:border-[#232731] text-xs text-slate-500 dark:text-slate-400 font-medium">
-                        Penjualan Jatuh Tempo (OVERDUE)
+                        class="mt-4 pt-2.5 border-t border-slate-100 dark:border-[#232731] flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
+                        <span>Melewati Tenggat</span>
+                        <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400">Filter Status</span>
+                    </div>
+                </div>
+
+                <!-- KPI 3: Penjualan Lunas -->
+                <div v-if="can('bank')" @click="setStatusFilter('PAID')" :class="['bg-white dark:bg-[#16191f] border rounded-xl p-4 sm:p-5 shadow-xs flex flex-col justify-between transition-all cursor-pointer',
+                    currentStatus === 'PAID' ? 'border-emerald-500 ring-1 ring-emerald-500 shadow-sm' : 'border-slate-200 dark:border-[#232731] hover:border-slate-300 dark:hover:border-slate-700'
+                ]">
+                    <div>
+                        <!-- Header Card: Label & Badge Transaksi -->
+                        <div class="flex items-center justify-between gap-2.5">
+                            <span
+                                class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">
+                                Lunas (PAID)
+                            </span>
+                            <span
+                                class="inline-flex items-center gap-1.5 bg-emerald-50 dark:bg-[#00e599]/10 border border-emerald-200 dark:border-[#00e599]/30 text-emerald-700 dark:text-[#00e599] px-2.5 py-1 rounded-md text-xs font-semibold shrink-0 whitespace-nowrap shadow-2xs">
+                                <BadgeCheck class="w-3.5 h-3.5 text-emerald-600 dark:text-[#00e599] shrink-0" />
+                                {{ metrics ? `${metrics.paid.count} Transaksi` : '...' }}
+                            </span>
+                        </div>
+                        <!-- Nilai Nominal Full Width -->
+                        <div
+                            class="mt-3 text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight font-mono">
+                            {{ metrics ? formatRupiah(metrics.paid.amount) : 'Memuat...' }}
+                        </div>
+                    </div>
+
+                    <!-- Footer Card -->
+                    <div
+                        class="mt-4 pt-2.5 border-t border-slate-100 dark:border-[#232731] flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
+                        <span>Selesai Terbayar</span>
+                        <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400">Filter Status</span>
                     </div>
                 </div>
             </section>
@@ -231,7 +288,10 @@ watch(search, () => applyFilter());
                                 </td>
                                 <!-- 2. No Transaksi -->
                                 <td class="py-3.5 px-4 font-mono font-semibold">
-                                    <Link href="#" class="text-[#ff5500] hover:underline">{{ item.order_id }}</Link>
+                                    <Link :href="route('invoice.show', item.order_id)"
+                                        class="text-[#ff5500] hover:underline">
+                                        {{ item.order_id }}
+                                    </Link>
                                 </td>
                                 <!-- 3. Pembeli -->
                                 <td class="py-3.5 px-4">

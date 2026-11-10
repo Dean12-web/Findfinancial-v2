@@ -7,12 +7,20 @@ import '@fontsource/plus-jakarta-sans/700.css';
 import '@fontsource/jetbrains-mono/500.css';   
 import '@fontsource/jetbrains-mono/600.css';
 
-import { createInertiaApp } from '@inertiajs/vue3';
+import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+
+// Otomatis refresh halaman jika sesi habis (419 Page Expired) agar mendapatkan token CSRF baru
+router.on('invalid', (event) => {
+    if (event.detail.response.status === 419) {
+        event.preventDefault();
+        window.location.reload();
+    }
+});
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,

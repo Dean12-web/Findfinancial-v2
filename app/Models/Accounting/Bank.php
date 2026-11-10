@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Bank extends Model
 {
-    protected $table = 'bank';
+    protected $table = 'tb_bank';
     protected $primaryKey = 'id';
     public $timestamps = false;
     protected $fillable = [
