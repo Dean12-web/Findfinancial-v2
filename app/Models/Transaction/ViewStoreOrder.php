@@ -60,12 +60,12 @@ class ViewStoreOrder extends Model
     }
     public function scopeRoleFilter(Builder $query, $user): Builder
     {
-        if ($user->role_user === 'adminbranch' || $user->role_user === 'kasir') {
-            return $query->where('view_store_order.store_id', $user->store_id)
-                ->where('view_store_order.role_store', 'seller');
+        if (in_array($user->role_user, ['adminbranch', 'cashier'], true)) {
+            return $query->where('view_store_order.store_id', $user->store_id)->where('view_store_order.role_store', 'seller');
         }
-        return $query->where('view_store_order.project_id', $user->project_id)
-            ->where('view_store_order.role_project', 'seller');
+        return $query
+            ->where('view_store_order.project_id', $user->project_id)
+            ->where('view_store_order.role_poject', 'seller');
     }
     /**
      * Scope Filter Status Transaksi (OPEN / PAID / OVERDUE)

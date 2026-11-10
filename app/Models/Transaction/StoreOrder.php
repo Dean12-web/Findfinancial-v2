@@ -5,11 +5,11 @@ namespace App\Models\Transaction;
 use App\Models\Accounting\CashTransaction;
 use App\Models\Catalog\ProductStock;
 use App\Models\Contact\Contact;
-use App\Models\Customer;
+use App\Models\Contact\Customer;
 use App\Models\Organization\Project;
 use App\Models\Organization\Store;
-use App\Models\StoreOrderDetail;
-use App\Models\StoreOrderPayment;
+use App\Models\Transaction\StoreOrderDetail;
+use App\Models\Transaction\StoreOrderPayment;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -129,7 +129,7 @@ class StoreOrder extends Model
     }
     public function scopeForUser(Builder $query, $user): Builder
     {
-        if ($user->role_user === 'adminbranch' || $user->role_user === 'kasir') {
+        if (in_array($user->role_user, ['adminbranch', 'cashier'], true)) {
             return $query->where('store_id', $user->store_id);
         }
         return $query->where('project_id', $user->project_id);

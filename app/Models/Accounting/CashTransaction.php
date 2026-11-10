@@ -19,12 +19,14 @@ class CashTransaction extends Model
         'title',
         'credit',
         'debit',
+        'balance',
         'memo',
         'date',
         'createdate',
         'updatedate',
         'updated_by',
     ];
+
     protected function casts(): array
     {
         return [
@@ -33,9 +35,9 @@ class CashTransaction extends Model
             'credit' => 'integer',
             'debit' => 'integer',
             'balance' => 'integer',
-            'date' => 'integer',
-            'createdate' => 'integer',
-            'updatedate' => 'integer',
+            'date' => 'date',
+            'createdate' => 'datetime',
+            'updatedate' => 'datetime',
         ];
     }
     public function bank(): BelongsTo

@@ -2,7 +2,7 @@
 
 namespace App\Models\Promotion;
 
-use App\Models\Customer;
+use App\Models\Contact\Customer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 

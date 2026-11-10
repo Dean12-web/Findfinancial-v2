@@ -4,7 +4,7 @@ namespace App\Models\Catalog;
 
 use App\Models\Organization\Project;
 use App\Models\Organization\Store;
-use App\Models\StoreOrderDetail;
+use App\Models\Transaction\StoreOrderDetail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,6 +39,7 @@ class Product extends Model
         'subcategory',
         'keywords',
         'permalink',
+        'archive',
         'created_date',
         'updated_date',
         'updated_by',
@@ -105,7 +106,7 @@ class Product extends Model
     }
     public function isSingle(): bool
     {
-        return $this->type('Single');
+        return $this->type === 'Single';
     }
     public function trackStock(): bool
     {

@@ -21,7 +21,7 @@ class FormatTransaction extends Model
         'updated_date',
         'updated_by',
     ];
-    protected function costs(): array
+    protected function casts(): array
     {
         return [
             'id' => 'integer',
