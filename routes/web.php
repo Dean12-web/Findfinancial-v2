@@ -8,6 +8,7 @@ use App\Http\Controllers\PosController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Middleware\EnsureUserHasInvoiceAccess;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -20,6 +21,7 @@ Route::middleware('auth')->group(function () {
 
     // Penjualan
     Route::get('/invoice', [InvoiceController::class, 'index'])->middleware(EnsureUserHasInvoiceAccess::class)->name('invoice');
+    Route::get('/invoice/new', [InvoiceController::class, 'create'])->name('invoice.new');
     Route::get('/invoice/{order_id}', [InvoiceController::class, 'show'])->name('invoice.show');
 
 

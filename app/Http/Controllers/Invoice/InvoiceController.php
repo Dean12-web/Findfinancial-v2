@@ -109,4 +109,9 @@ class InvoiceController extends Controller
             'invoice' => $invoice
         ]);
     }
+
+    public function create(): Response
+    {
+        return Inertia::render('Invoice/Create');
+    }
 }

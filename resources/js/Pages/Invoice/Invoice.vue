@@ -108,16 +108,17 @@ watch(search, () => applyFilter());
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <button type="button"
+                    <Link :href="route('invoice.new')"
                         class="h-9 px-3.5 bg-[#ff5500] hover:bg-[#ea4e00] text-white rounded-lg flex items-center gap-2 text-xs font-semibold shadow-xs transition-colors cursor-pointer">
                         <Plus class="w-4 h-4" />
                         <span>Buat Invoice</span>
-                    </button>
+                    </Link>
                 </div>
             </div>
 
             <!-- KPI Grid (Responsif & Luas, Kartu 3 Khusus Izin 'bank') -->
-            <section :class="['grid grid-cols-1 gap-4 lg:gap-5', can('bank') ? 'md:grid-cols-2 xl:grid-cols-3' : 'sm:grid-cols-2']">
+            <section
+                :class="['grid grid-cols-1 gap-4 lg:gap-5', can('bank') ? 'md:grid-cols-2 xl:grid-cols-3' : 'sm:grid-cols-2']">
                 <!-- KPI 1: Penjualan Belum Dibayar -->
                 <div @click="setStatusFilter('OPEN')" :class="['bg-white dark:bg-[#16191f] border rounded-xl p-4 sm:p-5 shadow-xs flex flex-col justify-between transition-all cursor-pointer',
                     currentStatus === 'OPEN' ? 'border-[#ff5500] ring-1 ring-[#ff5500] shadow-sm' : 'border-slate-200 dark:border-[#232731] hover:border-slate-300 dark:hover:border-slate-700'
