@@ -65,7 +65,7 @@ class ViewStoreOrder extends Model
         }
         return $query
             ->where('view_store_order.project_id', $user->project_id)
-            ->where('view_store_order.role_poject', 'seller');
+            ->where('view_store_order.role_project', 'seller');
     }
     /**
      * Scope Filter Status Transaksi (OPEN / PAID / OVERDUE)
