@@ -3,7 +3,16 @@
 namespace App\Http\Controllers\Invoice;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreInvoiceRequest;
+use App\Models\Accounting\Bank;
+use App\Models\Catalog\Tag;
+use App\Models\Organization\Warehouse;
+use App\Models\Setting\FormatTransaction;
+use App\Models\Setting\OtherSetting;
+use App\Models\Transaction\StoreOrder;
 use App\Models\Transaction\ViewStoreOrder;
+use App\Services\InvoiceCheckoutService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -110,8 +119,86 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        return Inertia::render('Invoice/Create');
+        $user = $request->user();
+        $storeId = (int) ($user->store_id ?? 0);
+        $projectId = (int) ($user->project_id ?: ($user->store?->project_id ?? 0));
+
+        $warehouses = Warehouse::query()
+            ->where('project_id', $projectId)
+            ->get(['id', 'name']);
+
+        $banks = Bank::query()
+            ->activeAccounts()
+            ->when($storeId > 0, fn($q) => $q->where('store_id', $storeId))
+            ->when($storeId === 0, fn($q) => $q->where('project_id', $projectId))
+            ->get(['id', 'name', 'balance']);
+
+        $formats = FormatTransaction::query()
+            ->where('project_id', $projectId)
+            ->orderBy('id')
+            ->get(['id', 'param_1', 'param_2', 'start', 'status']);
+
+        $otherSettings = OtherSetting::query()
+            ->whereIn('label', ['member_points', 'use_member_points', 'grosir_points', 'used_grosir_points'])
+            ->pluck('value_integer', 'label');
+
+        $tags = Tag::query()
+            ->where('project_id', $projectId)
+            ->whereIn('category', ['produk', 'penjual'])
+            ->get(['category', 'tag'])
+            ->map(fn($t) => strtolower("{$t->category}-{$t->tag}"))
+            ->values();
+
+        $suggesCustomers = $projectId !== 1 ? StoreOrder::query()
+            ->where('project_id', $projectId)
+            ->whereNotNull('customer_name')
+            ->where('customer_name', '!=', '')
+            ->distinct()
+            ->orderBy('customer_name')
+            ->pluck('customer_name') : collect();
+
+        // Opsional: dukung ?no_transaction=... untuk menyalin isi faktur lama
+        $templateOrder = null;
+        if ($request->filled('no_transaction')) {
+            $templateOrder = StoreOrder::query()
+                ->forUser($user)
+                ->where('order_id', (string) $request->input('no_transaction'))
+                ->with(['details.product:id,code,name,unit', 'customer:id,name,level,points,address', 'store:id,store_name,address'])
+                ->first();
+        }
+
+        $todayJakarta = now('Asia/Jakarta');
+
+        return Inertia::render('Invoice/Create', [
+            'warehouses' => $warehouses,
+            'banks' => $banks,
+            'formats' => $formats,
+            'tags' => $tags,
+            'suggestCustomer' => $suggesCustomers,
+            'templateOrder' => $templateOrder,
+            'pointSettings' => [
+                'member_points' => (int) ($otherSettings['member_points'] ?? 0),
+                'used_member_points' => (int) ($otherSettings['used_member_points'] ?? 0),
+                'grosir_points' => (int) ($otherSettings['grosir_points'] ?? 0),
+                'used_grosir_points' => (int) ($otherSettings['used_grosir_points'] ?? 0),
+            ],
+            'defaultDates' => [
+                'billing_date' => $todayJakarta->toDateString(),
+                'billing_due_date' => $todayJakarta->copy()->addDays(30)->toDateString(),
+            ],
+            'storeId' => $storeId,
+            'projectId' => $projectId,
+        ]);
+    }
+    public function store(StoreInvoiceRequest $request, InvoiceCheckoutService $checkoutService): RedirectResponse
+    {
+        $order = $checkoutService->execute($request->validated(), $request->user());
+
+        return redirect()
+            ->route('invoice')
+            ->with('success', "Transaksi {$order->order_id} berhasil dilakukan")
+            ->with('created_order_id', $order->order_id);
     }
 }
