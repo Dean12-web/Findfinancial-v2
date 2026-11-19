@@ -26,7 +26,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/invoice', [InvoiceController::class, 'index'])->name('invoice');
 
         Route::get('/invoice/new', [InvoiceController::class, 'create'])->name('invoice.new');
-        Route::post('/invoice', [InvoiceController::class, 'store'])->named('invoice.store');
+        Route::post('/invoice', [InvoiceController::class, 'store'])->name('invoice.store');
 
         Route::get('/invoice/lookup/buyers', [InvoiceLookupController::class, 'buyers'])->name('invoice.lookup.buyers');
         Route::get('/invoice/lookup/products', [InvoiceLookupController::class, 'products'])->name('invoice.lookup.products');
