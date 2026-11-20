@@ -119,6 +119,25 @@ class InvoiceController extends Controller
         ]);
     }
 
+    public function print(Request $request, string $order_id): Response
+    {
+        $user = $request->user();
+        $invoice = ViewStoreOrder::query()
+            ->roleFilter($user)
+            ->where('order_id', $order_id)
+            ->with([
+                'details.product',
+                'payments.bankDestination',
+                'customer',
+                'store'
+            ])
+            ->firstOrFail();
+
+        return Inertia::render('Invoice/PrintSalesInvoice', [
+            'invoice' => $invoice
+        ]);
+    }
+
     public function create(Request $request): Response
     {
         $user = $request->user();

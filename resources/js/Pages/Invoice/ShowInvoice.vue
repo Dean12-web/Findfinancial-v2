@@ -30,7 +30,12 @@ import {
     Ban,
     Store,
     User,
-    Check
+    Check,
+    SkipBack,
+    LucideSkipBack,
+    DollarSign,
+    BadgeDollarSign,
+    MailCheckIcon
 } from 'lucide-vue-next';
 const page = usePage();
 const user = computed(() => page.props.auth?.user);
@@ -124,6 +129,11 @@ const copyInvoiceLink = () => {
     setTimeout(() => {
         copied.value = false;
     }, 2000);
+};
+
+const printSalesInvoice = () => {
+    isPrintOpen.value = false;
+    window.open(route('invoice.print', props.invoice.order_id), '_blank');
 };
 
 onMounted(() => {
@@ -366,7 +376,8 @@ onUnmounted(() => {
                                     </td>
                                     <td class="py-3.5 px-4 text-center font-mono text-slate-500">
                                         <span v-if="!item.discount || Number(item.discount) === 0">-</span>
-                                        <span v-else-if="Number(item.discount) > 100">{{ formatRupiah(item.discount) }}</span>
+                                        <span v-else-if="Number(item.discount) > 100">{{ formatRupiah(item.discount)
+                                        }}</span>
                                         <span v-else>{{ item.discount }}%</span>
                                     </td>
                                     <td
@@ -589,13 +600,24 @@ onUnmounted(() => {
                                 </button>
 
                                 <!-- Cetak Faktur Standar -->
-                                <button @click="isPrintOpen = false" type="button"
+                                <button @click="printSalesInvoice" type="button"
                                     class="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-[#232731] transition-colors cursor-pointer">
                                     <FileText class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                                     <div>
                                         <span class="block font-semibold">Cetak Faktur Penjualan</span>
                                         <span class="block text-[10px] text-slate-400">Format Resmi Kertas A4 /
                                             Surat</span>
+                                    </div>
+                                </button>
+
+                                <!-- Kirim ke Email -->
+                                <button @click="isPrintOpen = false" type="button"
+                                    class="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-[#232731] transition-colors cursor-pointer">
+                                    <MailCheckIcon class="w-4 h-4 text-amber-500 shrink-0" />
+                                    <div>
+                                        <span class="block font-semibold">Email Faktur Penjualan</span>
+                                        <span class="block text-[10px] text-slate-400">kirim dokumen melalui
+                                            email</span>
                                     </div>
                                 </button>
 
@@ -644,17 +666,14 @@ onUnmounted(() => {
                                 <!-- Kirim WhatsApp -->
                                 <button @click="isActionOpen = false" type="button"
                                     class="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-[#232731] transition-colors cursor-pointer">
-                                    <Share2 class="w-4 h-4 text-[#25D366] shrink-0" />
-                                    <span>Kirim via WhatsApp</span>
+                                    <LucideSkipBack class="w-4 h-4 text-[#25D366] shrink-0" />
+                                    <span>Retur Penjualan</span>
                                 </button>
-                            </div>
-
-                            <div class="py-1">
-                                <!-- Batalkan Transaksi / Void -->
+                                <!-- Kirim WhatsApp -->
                                 <button @click="isActionOpen = false" type="button"
-                                    class="w-full flex items-center gap-2.5 px-3 py-2 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer">
-                                    <Ban class="w-4 h-4 shrink-0" />
-                                    <span>Batalkan / Void Faktur</span>
+                                    class="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-[#232731] transition-colors cursor-pointer">
+                                    <BadgeDollarSign class="w-4 h-4 text-yellow-500 shrink-0" />
+                                    <span>Terima Pembayaran</span>
                                 </button>
                             </div>
                         </div>

@@ -23,3 +23,13 @@
     background-size: 32px 32px;
     background-position: 0 0, 16px 16px;
 }
+
+.invoice-logo {
+    max-height: 80px;
+    max-width: 190px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    margin-bottom: 6px;
+}
