@@ -9,14 +9,23 @@ import {
     ChevronDown,
     History,
     User,
+    Store,
     RotateCw,
     Trash2,
     Search,
     Plus,
-    ArrowRight
+    ArrowRight,
+    X
 } from 'lucide-vue-next';
 import { useInvoiceCalculator } from '@/Composables/useInvoiceCalculator';
 import { useDebounceFn } from '@vueuse/core';
+import {
+    confirmTransaction,
+    notifySuccess,
+    notifyWarning,
+    notifyInfo,
+    notifyError
+} from '@/Utils/sweetalert';
 
 const props = defineProps({
     warehouses: { type: Array, default: () => [] },
@@ -25,7 +34,7 @@ const props = defineProps({
     tags: { type: Array, default: () => [] },
     suggestCustomers: { type: Array, default: () => [] },
     templateOrder: { type: Object, default: null },
-    pointSetttings: { type: Object, default: () => ({}) },
+    pointSettings: { type: Object, default: () => ({}) },
     defaultDates: { type: Object, default: () => ({}) },
     storeId: { type: Number, default: 0 },
     projectId: { type: Number, default: 0 },
@@ -43,9 +52,8 @@ const initialCustomer = (!isTemplateStoreBuyer && props.templateOrder?.customer)
 const initialBuyerName = isTemplateStoreBuyer ? (props.templateOrder?.store?.store_name || props.templateOrder?.customer_name || '') : (initialCustomer?.name || props.templateOrder?.customer_name || '');
 
 const selectedCustomer = ref(initialCustomer);
-const showShipping = ref(Boolean(props.templateOrder?.shipping_address || props.templateOrder?.shipping_option));
+const showShipping = ref(Boolean(props.templateOrder?.shipping_address || props.templateOrder?.shipping_option || props.templateOrder?.shipping_cost));
 const showFormatModal = ref(false);
-const lastAutoBillingAddress = ref(props.templateOrder?.billing_address || '');
 
 const buyerKeyword = ref(initialBuyerName);
 const buyerResults = ref([]);
@@ -53,18 +61,26 @@ const skipBuyerWatch = ref(false);
 const productKeyword = ref('');
 const productResults = ref([]);
 
+const tagInput = ref('');
+const selectedTags = ref(
+    props.templateOrder?.tags
+        ? String(props.templateOrder.tags).split(',').map((t) => t.trim()).filter(Boolean)
+        : []
+);
+
 const form = useForm({
-    buyer_type: isTemplateStoreBuyer ? 'store' : 'cutomer',
+    buyer_type: isTemplateStoreBuyer ? 'store' : 'customer',
     buyer_id: isTemplateStoreBuyer ? (props.templateOrder?.store_id || 0) : (props.templateOrder?.customer_id || 0),
     customer_name: initialBuyerName,
     warehouse_id: isAdminOrSuper.value ? (props.templateOrder?.warehouse_id || props.warehouses[0]?.id || 0) : 0,
     format_trx_id: 0,
     billing_date: props.defaultDates?.billing_date || '',
     billing_due_date: props.defaultDates?.billing_due_date || '',
-    billing_address: props.templateOrder?.billing_address || '',
+    billing_address: props.templateOrder?.billing_address || null,
     shipping_address: props.templateOrder?.shipping_address || '',
     shipping_date: '',
     shipping_option: props.templateOrder?.shipping_option || '',
+    shipping_cost: props.templateOrder?.shipping_cost || 0,
     tags: props.templateOrder?.tags || '',
     notes: props.templateOrder?.notes || '',
     memo: props.templateOrder?.memo || '',
@@ -92,6 +108,12 @@ const formatForm = useForm({
 });
 
 const pointRules = computed(() => {
+    if (form.buyer_type === 'store' || !selectedCustomer.value) {
+        return {
+            points_unit: 0,
+            used_points_unit: 0,
+        };
+    }
     const isMember = (selectedCustomer.value?.level || 'Member').toLowerCase() === 'member';
     return {
         points_unit: isMember
@@ -124,15 +146,34 @@ const {
 });
 
 const searchBuyers = useDebounceFn(async (kw) => {
-    if (!kw || kw.length < 1) {
+    if (form.buyer_type !== 'store' && (!kw || kw.length < 1)) {
         buyerResults.value = [];
         return;
     }
     const { data } = await axios.get(route('invoice.lookup.buyers', {
-        keyword: kw, role: form.buyer_type
+        keyword: kw || '', role: form.buyer_type
     }));
     buyerResults.value = data;
 }, 250);
+
+function switchBuyerType(type) {
+    skipBuyerWatch.value = true;
+    form.buyer_type = type;
+    form.buyer_id = 0;
+    form.customer_name = '';
+    buyerKeyword.value = '';
+    buyerResults.value = [];
+    selectedCustomer.value = null;
+
+    if (form.discount_type === 'point') {
+        form.discount_type = 'percentage';
+        form.discount_input = 0;
+    }
+
+    if (type === 'store') {
+        searchBuyers('');
+    }
+}
 
 watch(buyerKeyword, (val) => {
     if (skipBuyerWatch.value) {
@@ -153,13 +194,18 @@ function chooseBuyer(buyer) {
     form.buyer_id = buyer.id;
     form.buyer_type = buyer.role;
     form.customer_name = buyer.name;
-    if (!form.billing_address || form.billing_address === lastAutoBillingAddress.value) {
-        form.billing_address = buyer.address || '';
-        lastAutoBillingAddress.value = buyer.address || '';
-    }
     selectedCustomer.value = buyer.role === 'customer' ? buyer : null;
     buyerKeyword.value = buyer.title;
     buyerResults.value = [];
+
+    if (form.discount_type === 'point') {
+        if (!selectedCustomer.value || (Number(selectedCustomer.value.points) || 0) <= 0) {
+            form.discount_type = 'percentage';
+            form.discount_input = 0;
+        } else {
+            handleMasterDiscountInput();
+        }
+    }
 }
 
 watch(() => form.warehouse_id, () => {
@@ -184,26 +230,112 @@ const searchProducts = useDebounceFn(async (kw) => {
 watch(productKeyword, (val) => searchProducts(val));
 
 function addProductRow(product) {
-    form.items.push({
-        product_id: product.id,
-        name: product.name,
-        unit: product.unit || 'Pcs',
-        stock: product.stock,
-        quantity: 1,
-        price: product.price_sell,
-        discount_type: 'percentage',
-        discount: 0,
-    });
+    const existing = form.items.find((item) => item.product_id === product.id);
+    if (existing) {
+        existing.quantity += 1;
+    } else {
+        form.items.push({
+            product_id: product.id,
+            name: product.name,
+            unit: product.unit || 'Pcs',
+            stock: product.stock,
+            quantity: 1,
+            price: product.price_sell,
+            discount_type: 'percentage',
+            discount: 0,
+        });
+    }
     productKeyword.value = '';
     productResults.value = [];
 }
 
+function removeProductRow(idx) {
+    const removed = form.items[idx];
+    form.items.splice(idx, 1);
+    if (removed) {
+        notifyInfo(`${removed.name} dihapus`);
+    }
+}
+
+function handleDiscountTypeChange(item) {
+    if (item.discount_type === 'percentage') {
+        if (Number(item.discount) > 100) {
+            item.discount = 0;
+        }
+    } else if (item.discount_type === 'nominal') {
+        const maxPrice = Number(item.price) || 0;
+        if (Number(item.discount) > maxPrice) {
+            item.discount = maxPrice;
+        }
+    }
+}
+
+function sanitizeDiscount(item) {
+    if (item.discount < 0) {
+        item.discount = 0;
+    }
+    if (item.discount_type === 'percentage') {
+        if (Number(item.discount) > 100) {
+            item.discount = 100;
+        }
+    }
+}
+
+function rowDiscountCut(item) {
+    const gross = (Number(item.price) || 0) * (Number(item.quantity) || 0);
+    const disc = Math.max(0, Number(item.discount) || 0);
+    if (disc <= 0) return 0;
+    const cut = item.discount_type === 'percentage'
+        ? (gross * Math.min(100, disc)) / 100
+        : Math.min(gross, disc * (Number(item.quantity) || 0));
+    return Math.min(cut, gross);
+}
+
 function rowNetTotal(item) {
     const gross = (Number(item.price) || 0) * (Number(item.quantity) || 0);
-    const disc = Number(item.discount) || 0;
-    if (disc <= 0) return gross;
-    const cut = item.discount_type === 'percentage' ? (gross * disc) / 100 : disc * (Number(item.quantity) || 0);
+    const cut = rowDiscountCut(item);
     return Math.max(0, gross - cut);
+}
+
+function handleMasterDiscountTypeChange() {
+    if (form.discount_type === 'point') {
+        if (!selectedCustomer.value) {
+            notifyWarning('Pilih pelanggan terlebih dahulu untuk menggunakan diskon poin.');
+            form.discount_type = 'percentage';
+            form.discount_input = 0;
+            return;
+        }
+        const maxPts = Number(selectedCustomer.value?.points) || 0;
+        if (maxPts <= 0) {
+            notifyWarning('Pelanggan ini tidak memiliki saldo poin.');
+            form.discount_type = 'percentage';
+            form.discount_input = 0;
+            return;
+        }
+        if (Number(form.discount_input) > maxPts) {
+            form.discount_input = maxPts;
+        }
+    } else if (form.discount_type === 'percentage') {
+        if (Number(form.discount_input) > 100) {
+            form.discount_input = 100;
+        }
+    }
+}
+
+function handleMasterDiscountInput() {
+    if (Number(form.discount_input) < 0) {
+        form.discount_input = 0;
+    }
+    if (form.discount_type === 'point') {
+        const maxPts = Number(selectedCustomer.value?.points) || 0;
+        if (Number(form.discount_input) > maxPts) {
+            form.discount_input = maxPts;
+        }
+    } else if (form.discount_type === 'percentage') {
+        if (Number(form.discount_input) > 100) {
+            form.discount_input = 100;
+        }
+    }
 }
 
 function saveNewFormat() {
@@ -225,9 +357,84 @@ function deleteSelectedFormat() {
         },
     });
 }
-function submitInvoice() {
+
+watch(selectedTags, (tagsArr) => {
+    form.tags = tagsArr.length > 0 ? tagsArr.join(', ') : '';
+}, { deep: true, immediate: true });
+
+watch(showShipping, (isActive) => {
+    if (!isActive) {
+        form.shipping_cost = 0;
+    }
+});
+
+function addTag(raw) {
+    if (!raw) return;
+    const parts = String(raw).split(',').map((t) => t.trim()).filter(Boolean);
+    parts.forEach((p) => {
+        if (!selectedTags.value.includes(p)) {
+            selectedTags.value.push(p);
+        }
+    });
+    tagInput.value = '';
+}
+
+function removeTag(index) {
+    selectedTags.value.splice(index, 1);
+}
+
+function handleTagBackspace() {
+    if (tagInput.value === '' && selectedTags.value.length > 0) {
+        selectedTags.value.pop();
+    }
+}
+
+async function submitInvoice() {
+    if (form.items.length === 0) {
+        notifyWarning('Keranjang produk masih kosong! Tambahkan minimal 1 produk.');
+        return;
+    }
+
+    if (form.buyer_type === 'store' && (!form.buyer_id || form.buyer_id <= 0)) {
+        notifyWarning('Silakan pilih toko tujuan pasokan terlebih dahulu.');
+        return;
+    }
+
+    if (form.buyer_type === 'customer' && !form.customer_name) {
+        notifyWarning('Nama pembeli/pelanggan tidak boleh kosong.');
+        return;
+    }
+
+    const buyerDisplayName = form.buyer_type === 'store'
+        ? (form.customer_name || 'Toko Cabang')
+        : (form.customer_name || 'Pelanggan Umum');
+
+    const pointsUsedText = form.discount_type === 'point' && Number(form.discount_input) > 0
+        ? `${form.discount_input} Poin (-${formatRupiah(masterDiscountAmount.value)})`
+        : null;
+
+    const pointsEarnedText = form.buyer_type === 'customer' && Number(pointsEarned.value) > 0
+        ? `+${pointsEarned.value} Poin ${remainingBalance.value > 0 ? '(Saat lunas)' : ''}`
+        : null;
+
+    const result = await confirmTransaction({
+        buyerType: form.buyer_type,
+        buyerName: buyerDisplayName,
+        itemCount: form.items.length,
+        grandTotalFormatted: formatRupiah(grandTotal.value),
+        paidFormatted: formatRupiah(form.paid),
+        remainingFormatted: remainingBalance.value === 0 ? 'LUNAS' : formatRupiah(remainingBalance.value),
+        pointsUsedText,
+        pointsEarnedText,
+    });
+
+    if (!result.isConfirmed) return;
+
     form.post(route('invoice.store'), {
         preserveScroll: true,
+        onError: () => {
+            notifyError('Gagal memproses transaksi. Silakan periksa kembali formulir.');
+        },
     });
 }
 </script>
@@ -288,16 +495,20 @@ function submitInvoice() {
                     <div class="space-y-4">
                         <div class="relative">
                             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                                Pembeli (Pelanggan) <span class="text-[#ff5500]">*</span>
+                                Pembeli ({{ form.buyer_type === 'store' ? 'Toko Tujuan' : 'Pelanggan' }}) <span
+                                    class="text-[#ff5500]">*</span>
                             </label>
                             <template v-if="projectId === 1">
                                 <div
                                     class="flex rounded-lg border border-slate-300 dark:border-[#2e3340] focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500 overflow-hidden bg-white dark:bg-[#1c2027] shadow-xs">
                                     <span
                                         class="inline-flex items-center px-3.5 bg-white dark:bg-[#1c2027] text-slate-400 border-r border-slate-200 dark:border-[#2e3340]">
-                                        <User class="w-4 h-4" />
+                                        <Store v-if="form.buyer_type === 'store'" class="w-4 h-4 text-blue-500" />
+                                        <User v-else class="w-4 h-4" />
                                     </span>
-                                    <input v-model="buyerKeyword" type="text" placeholder="Nama atau Email Pelanggan"
+                                    <input v-model="buyerKeyword"
+                                        @focus="form.buyer_type === 'store' && searchBuyers(buyerKeyword)" type="text"
+                                        :placeholder="form.buyer_type === 'store' ? 'Pilih atau cari nama toko...' : 'Nama atau Email Pelanggan'"
                                         class="flex-1 border-0 py-2.5 px-3 text-sm focus:ring-0 text-slate-800 dark:text-slate-100 placeholder-slate-400 bg-transparent" />
                                     <div
                                         class="relative inline-flex items-center bg-slate-50 dark:bg-[#232731] border-l border-slate-200 dark:border-[#2e3340]">
@@ -314,14 +525,27 @@ function submitInvoice() {
                                     class="absolute z-20 mt-1 w-full bg-white dark:bg-[#1c2027] border border-slate-200 dark:border-[#2e3340] rounded-lg shadow-lg max-h-48 overflow-y-auto">
                                     <button v-for="b in buyerResults" :key="`${b.role}-${b.id}`" type="button"
                                         @click="chooseBuyer(b)"
-                                        class="w-full text-left px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#232731] border-b border-slate-100 dark:border-[#232731] last:border-b-0">
-                                        {{ b.title }}
+                                        class="w-full text-left px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#232731] border-b border-slate-100 dark:border-[#232731] last:border-b-0 flex items-center justify-between">
+                                        <span class="font-medium">{{ b.title }}</span>
+                                        <span v-if="b.role === 'store'"
+                                            class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50">Toko
+                                            Cabang</span>
                                     </button>
                                 </div>
+                                <div v-if="form.buyer_type === 'store' && form.buyer_id > 0"
+                                    class="mt-2 text-xs text-blue-700 dark:text-blue-300 flex items-center justify-between bg-blue-50 dark:bg-blue-950/30 px-3.5 py-1.5 rounded-lg border border-blue-200 dark:border-blue-900/40">
+                                    <span class="flex items-center gap-1.5">
+                                        <Store class="w-3.5 h-3.5 text-blue-500" />
+                                        <span>Toko Tujuan: <strong>{{ form.customer_name }}</strong></span>
+                                    </span>
+                                    <span
+                                        class="text-[10px] uppercase font-semibold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">Pasokan
+                                        B2B</span>
+                                </div>
                                 <div v-if="selectedCustomer"
-                                    class="mt-2 text-xs text-slate-600 dark:text-slate-300 flex justify-between bg-slate-50 dark:bg-[#1c2027] px-3 py-1.5 rounded-lg border border-slate-200 dark:border-[#2e3340]">
-                                    <span>Level: <strong>{{ selectedCustomer.level }}</strong></span>
-                                    <span>Poin: <strong class="font-mono">{{ selectedCustomer.points }}</strong></span>
+                                    class="mt-2 text-xs text-slate-600 dark:text-slate-300 flex justify-between bg-slate-50 dark:bg-[#1c2027] px-3.5 py-2 rounded-lg border border-slate-200 dark:border-[#2e3340]">
+                                    <span>Level: <strong class="capitalize">{{ selectedCustomer.level }}</strong></span>
+                                    <span>Saldo Poin: <strong class="font-mono text-emerald-600 dark:text-emerald-400">{{ selectedCustomer.points }}</strong> Poin</span>
                                 </div>
                             </template>
                             <template v-else>
@@ -344,9 +568,14 @@ function submitInvoice() {
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Alamat
                                 Pengiriman</label>
-                            <textarea v-model="form.shipping_address" rows="3"
-                                placeholder="Alamat lengkap pengiriman..."
-                                class="w-full rounded-lg border border-slate-300 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] px-3.5 py-2.5 text-sm text-slate-800 dark:text-slate-100 resize-none shadow-xs"></textarea>
+                            <textarea v-model="form.shipping_address" rows="3" :readonly="!showShipping"
+                                :placeholder="!showShipping ? 'Aktifkan Info Pengiriman untuk mengisi alamat...' : 'Alamat lengkap pengiriman...'"
+                                :class="[
+                                    'w-full rounded-lg border border-slate-300 dark:border-[#2e3340] px-3.5 py-2.5 text-sm resize-none shadow-xs transition-colors',
+                                    !showShipping
+                                        ? 'bg-slate-100 dark:bg-[#1c2027]/50 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                                        : 'bg-white dark:bg-[#1c2027] text-slate-800 dark:text-slate-100'
+                                ]"></textarea>
                         </div>
                     </div>
 
@@ -434,11 +663,26 @@ function submitInvoice() {
                             <div :class="showShipping ? '' : 'sm:col-span-2'">
                                 <label
                                     class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Tag</label>
-                                <input v-model="form.tags" list="list-invoice-tags" type="text"
-                                    placeholder="e.g. produk-unggulan"
-                                    class="w-full rounded-lg border border-slate-300 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] py-2.5 px-3.5 text-sm text-slate-800 dark:text-slate-100" />
+                                <div
+                                    class="flex flex-wrap items-center gap-1.5 p-1.5 min-h-[42px] rounded-lg border border-slate-300 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500 shadow-xs">
+                                    <span v-for="(t, idx) in selectedTags" :key="idx"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-[#ff5500]/10 text-[#ff5500] dark:bg-[#ff5500]/20 dark:text-[#ff7733] border border-[#ff5500]/20 font-mono">
+                                        <span>{{ t }}</span>
+                                        <button type="button" @click="removeTag(idx)"
+                                            class="hover:text-rose-600 focus:outline-none cursor-pointer">
+                                            <X class="w-3 h-3" />
+                                        </button>
+                                    </span>
+                                    <input v-model="tagInput" @keydown.enter.prevent="addTag(tagInput)"
+                                        @keydown.comma.prevent="addTag(tagInput)"
+                                        @keydown.backspace="handleTagBackspace" @change="addTag(tagInput)"
+                                        list="list-invoice-tags" type="text"
+                                        :placeholder="selectedTags.length === 0 ? 'Ketik tag lalu tekan Enter...' : 'Tambah tag...'"
+                                        class="flex-1 min-w-[120px] border-0 py-1 px-2 text-sm bg-transparent focus:ring-0 text-slate-800 dark:text-slate-100 placeholder-slate-400" />
+                                </div>
                                 <datalist id="list-invoice-tags">
-                                    <option v-for="t in tags" :key="t" :value="t" />
+                                    <option v-for="t in tags.filter(x => !selectedTags.includes(x))" :key="t"
+                                        :value="t" />
                                 </datalist>
                             </div>
                         </div>
@@ -507,21 +751,32 @@ function submitInvoice() {
                                 </td>
                                 <td class="py-3.5 px-4">
                                     <select v-model="item.discount_type"
-                                        class="w-full rounded-lg border border-slate-300 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] py-1.5 px-3 text-sm text-slate-800 dark:text-slate-100">
-                                        <option value="percentage">%</option>
-                                        <option value="nominal">Rp</option>
+                                        @change="handleDiscountTypeChange(item)"
+                                        class="w-full rounded-lg border border-slate-300 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] py-1.5 px-2.5 text-xs text-slate-800 dark:text-slate-100 cursor-pointer">
+                                        <option value="percentage">% (Persen)</option>
+                                        <option value="nominal">Rp (Nominal)</option>
                                     </select>
                                 </td>
                                 <td class="py-3.5 px-4">
-                                    <input v-model.number="item.discount" type="number" min="0"
-                                        class="w-full rounded-lg border border-slate-300 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] py-1.5 px-3 text-sm font-mono text-slate-800 dark:text-slate-100" />
+                                    <div class="space-y-1">
+                                        <input v-model.number="item.discount"
+                                            @input="sanitizeDiscount(item)"
+                                            type="number"
+                                            min="0"
+                                            :max="item.discount_type === 'percentage' ? 100 : item.price"
+                                            :placeholder="item.discount_type === 'percentage' ? '0 - 100' : 'Rp/pcs'"
+                                            class="w-full rounded-lg border border-slate-300 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] py-1.5 px-3 text-sm font-mono text-slate-800 dark:text-slate-100" />
+                                        <div v-if="rowDiscountCut(item) > 0" class="text-[10px] text-rose-600 dark:text-rose-400 font-mono">
+                                            -{{ formatRupiah(rowDiscountCut(item)) }}
+                                        </div>
+                                    </div>
                                 </td>
                                 <td
                                     class="py-3.5 px-4 text-right font-semibold font-mono text-slate-900 dark:text-slate-100">
                                     {{ formatRupiah(rowNetTotal(item)) }}
                                 </td>
                                 <td class="py-3.5 px-4 text-center">
-                                    <button type="button" @click="form.items.splice(idx, 1)"
+                                    <button type="button" @click="removeProductRow(idx)"
                                         class="w-8 h-8 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30">
                                         <Trash2 class="w-4 h-4" />
                                     </button>
@@ -571,31 +826,66 @@ function submitInvoice() {
                             formatRupiah(lineDiscountTotal)
                         }}</span>
                     </div>
-                    <div
-                        class="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-[#232731] pb-3">
-                        <div class="flex items-center gap-2">
-                            <select v-model="form.discount_type"
-                                class="rounded-lg border border-slate-300 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] py-1.5 px-2.5 text-xs text-slate-800 dark:text-slate-100">
-                                <option value="percentage">Diskon (%)</option>
-                                <option value="amount">Diskon (Rp)</option>
-                                <option value="point">Tukar Poin</option>
-                            </select>
-                            <input v-model.number="form.discount_input" type="number" min="0"
-                                class="w-24 rounded-lg border border-slate-300 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] py-1.5 px-2.5 text-xs font-mono text-right text-slate-800 dark:text-slate-100" />
+                    <div class="flex flex-col gap-1 border-b border-slate-100 dark:border-[#232731] pb-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <select v-model="form.discount_type"
+                                    @change="handleMasterDiscountTypeChange"
+                                    class="rounded-lg border border-slate-300 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] py-1.5 px-2.5 text-xs text-slate-800 dark:text-slate-100">
+                                    <option value="percentage">Diskon (%)</option>
+                                    <option value="amount">Diskon (Rp)</option>
+                                    <option v-if="form.buyer_type !== 'store'" value="point">
+                                        Tukar Poin {{ selectedCustomer ? `(${selectedCustomer.points} Poin)` : '' }}
+                                    </option>
+                                </select>
+                                <input v-model.number="form.discount_input"
+                                    @input="handleMasterDiscountInput"
+                                    type="number"
+                                    min="0"
+                                    :max="form.discount_type === 'point' ? (selectedCustomer?.points || 0) : (form.discount_type === 'percentage' ? 100 : undefined)"
+                                    :placeholder="form.discount_type === 'point' ? 'Jml Poin' : '0'"
+                                    class="w-24 rounded-lg border border-slate-300 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] py-1.5 px-2.5 text-xs font-mono text-right text-slate-800 dark:text-slate-100" />
+                            </div>
+                            <span class="font-bold font-mono text-sm text-rose-600 dark:text-rose-400">- {{
+                                formatRupiah(masterDiscountAmount) }}</span>
                         </div>
-                        <span class="font-bold font-mono text-sm text-rose-600 dark:text-rose-400">- {{
-                            formatRupiah(masterDiscountAmount) }}</span>
+                        <div v-if="form.discount_type === 'point' && selectedCustomer" class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between pt-0.5">
+                            <span>1 Poin = {{ formatRupiah(pointRules.used_points_unit) }}</span>
+                            <span>Maks: <strong class="font-mono text-emerald-600 dark:text-emerald-400">{{ selectedCustomer.points }}</strong> Poin</span>
+                        </div>
                     </div>
                     <div
                         class="flex items-center justify-between gap-4 text-sm border-b border-slate-100 dark:border-[#232731] pb-2">
                         <label class="text-slate-600 dark:text-slate-400 font-medium">Ongkir</label>
-                        <input v-model.number="form.shipping_cost" type="number" min="0"
-                            class="w-56 rounded-lg border border-slate-300 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] py-1.5 px-3 text-right text-sm font-mono text-slate-800 dark:text-slate-100" />
+                        <input v-model.number="form.shipping_cost" :readonly="!showShipping" type="number" min="0"
+                            :placeholder="!showShipping ? '0' : '0'"
+                            :class="[
+                                'w-56 rounded-lg border border-slate-300 dark:border-[#2e3340] py-1.5 px-3 text-right text-sm font-mono transition-colors shadow-xs',
+                                !showShipping
+                                    ? 'bg-slate-100 dark:bg-[#1c2027]/50 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                                    : 'bg-white dark:bg-[#1c2027] text-slate-800 dark:text-slate-100'
+                            ]" />
                     </div>
-                    <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                        <span>Estimasi Poin Diperoleh</span>
-                        <span class="font-mono font-bold text-slate-800 dark:text-slate-200">{{ pointsEarned }}
-                            Poin</span>
+                    <div v-if="form.buyer_type !== 'store'"
+                        class="flex flex-col gap-1 border-b border-slate-100 dark:border-[#232731] pb-2 text-xs">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-600 dark:text-slate-400 font-medium">Estimasi Poin Diperoleh</span>
+                            <span :class="[
+                                'font-mono font-bold',
+                                pointsEarned > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'
+                            ]">
+                                {{ pointsEarned > 0 ? `+${pointsEarned} Poin` : '0 Poin' }}
+                            </span>
+                        </div>
+                        <p v-if="lineDiscountTotal > 0 || masterDiscountAmount > 0" class="text-[11px] text-amber-600 dark:text-amber-400">
+                            * Poin tidak diperoleh karena terdapat diskon pada transaksi.
+                        </p>
+                        <p v-else-if="pointRules.points_unit > 0 && pointsEarned > 0 && remainingBalance > 0" class="text-[11px] text-slate-400 dark:text-slate-500">
+                            * Poin akan dikreditkan ke saldo pelanggan setelah faktur lunas.
+                        </p>
+                        <p v-else-if="pointRules.points_unit > 0 && pointsEarned > 0" class="text-[11px] text-slate-400 dark:text-slate-500">
+                            * Tiap belanja kelipatan {{ formatRupiah(pointRules.points_unit) }} mendapat 1 poin.
+                        </p>
                     </div>
                     <div
                         class="flex items-center justify-between py-2 text-sm font-bold border-b border-slate-200 dark:border-[#2e3340]">

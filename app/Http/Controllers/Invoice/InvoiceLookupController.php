@@ -18,16 +18,16 @@ class InvoiceLookupController extends Controller
         $role = $request->input('role', 'customer');
         $user = $request->user();
         $projectId = (int) ($user->project_id ?: ($user->store?->project_id ?? 0));
-        if ($keyword === '') {
-            return response()->json([]);
-        }
+        $userStoreId = (int) ($user->store_id ?? 0);
 
         if ($role === 'store') {
             abort_unless(in_array($user->role_user, ['admin', 'superadmin'], true), 403);
             $stores = Store::query()
                 ->where('project_id', $projectId)
-                ->where('store_name', 'LIKE', "%{$keyword}%")
-                ->limit(15)
+                ->when($userStoreId > 0, fn($q) => $q->where('id', '!=', $userStoreId))
+                ->when($keyword !== '', fn($q) => $q->where('store_name', 'LIKE', "%{$keyword}%"))
+                ->orderBy('store_name')
+                ->limit(20)
                 ->get(['id', 'store_name', 'address']);
 
             return response()->json($stores->map(fn($s) => [
@@ -39,6 +39,10 @@ class InvoiceLookupController extends Controller
                 'points' => 0,
                 'address' => $s->address,
             ]));
+        }
+
+        if ($keyword === '') {
+            return response()->json([]);
         }
 
         $customers = Customer::query()

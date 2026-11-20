@@ -365,7 +365,9 @@ onUnmounted(() => {
                                         {{ formatRupiah(item.price) }}
                                     </td>
                                     <td class="py-3.5 px-4 text-center font-mono text-slate-500">
-                                        {{ item.discount || 0 }}%
+                                        <span v-if="!item.discount || Number(item.discount) === 0">-</span>
+                                        <span v-else-if="Number(item.discount) > 100">{{ formatRupiah(item.discount) }}</span>
+                                        <span v-else>{{ item.discount }}%</span>
                                     </td>
                                     <td
                                         class="py-3.5 px-4 text-right font-mono font-semibold text-slate-900 dark:text-white">

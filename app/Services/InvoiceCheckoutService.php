@@ -61,7 +61,7 @@ class InvoiceCheckoutService
 
                 if ($rowDiscInput > 0) {
                     $rowDiscAmount = $rowDiscType === 'percentage'
-                        ? ($rowGross * $rowDiscInput) / 100
+                        ? ($rowGross * min(100, $rowDiscInput)) / 100
                         : ($qty * $rowDiscInput);
                 }
 
@@ -201,7 +201,7 @@ class InvoiceCheckoutService
             }
 
             // Proses Poin Customer
-            if ($paid > 0 && $customer) {
+            if ($customer) {
                 $isUsingPointDiscount = ($discountType === 'point' && $discountInput > 0);
                 $poinTransId = is_numeric($orderId) ? (int) $orderId : (int) $order->id;
 

@@ -19,7 +19,10 @@ export function useInvoiceCalculator({
           const discVal = Number(item.discount) || 0;
           if(discVal <= 0) return sum;
           
-          const cut = item.discount_type === 'percentage' ? (rowGross * discVal) / 100 : discVal * (Number(item.quantity) || 0);
+          const safeDisc = Math.max(0, discVal);
+          const cut = item.discount_type === 'percentage'
+              ? (rowGross * Math.min(100, safeDisc)) / 100
+              : Math.min(rowGross, safeDisc * (Number(item.quantity) || 0));
 
           return sum + Math.min(cut, rowGross);
         },0)

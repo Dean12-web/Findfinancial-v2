@@ -25,6 +25,7 @@ import {
     Split
 } from 'lucide-vue-next';
 import { useDebounceFn } from '@vueuse/core';
+import { showSuccessTransaction } from '@/Utils/sweetalert';
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user);
@@ -82,6 +83,23 @@ const setStatusFilter = (status) => {
 };
 
 watch(search, () => applyFilter());
+
+watch(
+    () => page.props.flash?.success,
+    (msg) => {
+        if (msg) {
+            const orderId = page.props.flash?.created_order_id || page.props.flash?.create_order_id;
+            showSuccessTransaction({
+                message: msg,
+                orderId: orderId,
+                onViewOrder: (id) => {
+                    router.visit(route('invoice.show', id));
+                },
+            });
+        }
+    },
+    { immediate: true }
+);
 </script>
 
 <template>

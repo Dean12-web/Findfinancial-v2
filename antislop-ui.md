@@ -1,9 +1,6 @@
 # antislop-ui
 
 > Anti Slop: Rules for AI Coding Agents. UI & Visual skill
->
-> Source: [miqdadbadjuber/anti-slop — `skills/antislop-ui`](https://github.com/miqdadbadjuber/anti-slop/tree/main/skills/antislop-ui)
->
 > Description: UI and visual skill for antislop. Use when building or editing any interface: color, layout, components, motion, and page performance. Load with the core (`antislop.md`).
 
 > Part of the antislop system. Read together with `antislop.md` (the core). This skill deep-dives the UI/visual concern: color, layout, components, decoration, structural flow, and motion. It references core rules by number and never duplicates or renumbers them. Load it when the task builds or edits a website, web app, or any interface.
