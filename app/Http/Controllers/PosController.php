@@ -66,7 +66,7 @@ class PosController extends Controller
 
     public function printThermal(Request $request)
     {
-        $orderId = (string) $request->query('not_transaction', '');
+        $orderId = (string) ($request->query('no_transaction') ?? $request->query('not_transaction') ?? $request->query('order_id') ?? '');
         $order = ViewStoreOrder::query()
             ->roleFilter($request->user())
             ->where('order_id', $orderId)

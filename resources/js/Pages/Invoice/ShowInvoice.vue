@@ -136,6 +136,11 @@ const printSalesInvoice = () => {
     window.open(route('invoice.print', props.invoice.order_id), '_blank');
 };
 
+const printThermalReceipt = () => {
+    isPrintOpen.value = false;
+    window.open(route('pos.print', { no_transaction: props.invoice.order_id }), '_blank');
+};
+
 onMounted(() => {
     window.addEventListener('click', closeDropdowns);
 });
@@ -590,7 +595,7 @@ onUnmounted(() => {
 
                             <div class="py-1">
                                 <!-- Cetak Struk Kasir (Thermal) -->
-                                <button @click="isPrintOpen = false" type="button"
+                                <button @click="printThermalReceipt" type="button"
                                     class="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-[#232731] transition-colors cursor-pointer">
                                     <ReceiptText class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                                     <div>
