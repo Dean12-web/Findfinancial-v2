@@ -33,6 +33,7 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/invoice/{order_id}', [InvoiceController::class, 'show'])->name('invoice.show');
         Route::get('/invoice/{order_id}/print', [InvoiceController::class, 'print'])->name('invoice.print');
+        Route::get('/invoice/{order_id}/delivery-note', [InvoiceController::class, 'deliveryNote'])->name('invoice.delivery-note');
 
         Route::post('/format-transactions', [FormatTransactionController::class, 'store'])->name('format-transactions.store');
         Route::delete('/format-transactions/{formatTransaction}', [FormatTransactionController::class, 'destroy'])->name('format-transactions.destroy');

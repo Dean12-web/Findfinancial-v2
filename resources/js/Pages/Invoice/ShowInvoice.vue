@@ -141,6 +141,11 @@ const printThermalReceipt = () => {
     window.open(route('pos.print', { no_transaction: props.invoice.order_id }), '_blank');
 };
 
+const printDeliveryNote = () => {
+    isPrintOpen.value = false;
+    window.open(route('invoice.delivery-note', props.invoice.order_id), '_blank');
+};
+
 onMounted(() => {
     window.addEventListener('click', closeDropdowns);
 });
@@ -627,7 +632,7 @@ onUnmounted(() => {
                                 </button>
 
                                 <!-- Cetak Surat Jalan -->
-                                <button @click="isPrintOpen = false" type="button"
+                                <button @click="printDeliveryNote" type="button"
                                     class="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-[#232731] transition-colors cursor-pointer">
                                     <Truck class="w-4 h-4 text-amber-500 shrink-0" />
                                     <div>

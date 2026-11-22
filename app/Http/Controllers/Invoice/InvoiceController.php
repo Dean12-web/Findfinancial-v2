@@ -138,6 +138,25 @@ class InvoiceController extends Controller
         ]);
     }
 
+    public function deliveryNote(Request $request, string $order_id): Response
+    {
+        $user = $request->user();
+        $invoice = ViewStoreOrder::query()
+            ->roleFilter($user)
+            ->where('order_id', $order_id)
+            ->with([
+                'details.product',
+                'customer',
+                'store',
+                'warehouse'
+            ])
+            ->firstOrFail();
+
+        return Inertia::render('Invoice/DeliveryNote', [
+            'invoice' => $invoice
+        ]);
+    }
+
     public function create(Request $request): Response
     {
         $user = $request->user();
