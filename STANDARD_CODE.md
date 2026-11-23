@@ -60,12 +60,13 @@ Setiap pengembangan wajib mengikuti urutan prioritas berikut:
 
 Solusi yang cepat tetapi mengorbankan keamanan tidak diperbolehkan.
 
-## 2.1 Integrasi dengan [AGENTS.md](http://AGENTS.md)
+## 2.1 Integrasi dengan [AGENTS.md](http://AGENTS.md) dan [antislop-ui.md](antislop-ui.md)
 
 Seluruh AI coding agent wajib mengikuti:
 
 *   `AGENTS.md` untuk aturan operasional.
-*   `STANDARD_CODE.md` untuk standar implementasi.
+*   `STANDARD_CODE.md` untuk standar implementasi backend, arsitektur, dan keamanan.
+*   `antislop-ui.md` untuk standar visual UI/UX, tata letak, komponen, dan pencegahan AI slop pada antarmuka.
 
 Ketentuan penting:
 
@@ -623,6 +624,15 @@ Dilarang menyimpan informasi rahasia dalam:
 Token authentication tidak boleh disimpan dalam localStorage secara default tanpa analisis ancaman dan persetujuan arsitektur.
 
 Untuk aplikasi web berbasis session, prioritaskan cookie yang aman dan HttpOnly.
+
+## 7.4 Standar Desain UI & Anti-Slop
+
+Seluruh pengembangan antarmuka Vue.js wajib mematuhi panduan [antislop-ui.md](antislop-ui.md):
+* Gunakan palet warna terarah dari identitas sistem (hindari gradien generik ungu/biru atau efek glow berlebihan).
+* Buat tata letak dan hierarki berdasarkan keputusan pengguna, bukan template generik.
+* Hindari penggunaan emoji dekoratif dalam teks UI, badge status palsu, atau data statistik tiruan.
+* Pastikan seluruh tombol, link navigasi, dan form interaktif memiliki aksi nyata atau status yang jelas.
+* Verifikasi checklist antislop sebelum mengajukan implementasi UI.
 
  *
 

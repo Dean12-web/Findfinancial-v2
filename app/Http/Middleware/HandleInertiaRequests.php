@@ -72,7 +72,8 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn() => $request->session()->get('error'),
                 'created_order_id' => fn() => $request->session()->get('created_order_id') ?? $request->session()->get('create_order_id'),
                 'create_order_id' => fn() => $request->session()->get('create_order_id') ?? $request->session()->get('created_order_id'),
-                'completedOrder' => fn() => $request->session()->get('completedOrder'),
+                'completedOrder' => fn() => $request->session()->get('completedOrder') ?? $request->session()->get('completeOrder'),
+                'completeOrder' => fn() => $request->session()->get('completeOrder') ?? $request->session()->get('completedOrder'),
             ],
         ];
     }

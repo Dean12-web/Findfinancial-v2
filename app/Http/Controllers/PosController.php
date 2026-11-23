@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Accounting\Bank;
 use App\Models\Catalog\Tag;
+use App\Models\Organization\Warehouse;
 use App\Models\Setting\OtherSetting;
 use App\Models\Transaction\ViewStoreOrder;
 use App\Services\InvoiceCheckoutService;
@@ -20,6 +21,10 @@ class PosController extends Controller
         $user = $request->user();
         $storeId = (int) ($user->store_id ?? 0);
         $projectId = (int) ($user->project_id ?: ($user->store?->project_id ?? 0));
+
+        $warehouses = Warehouse::query()
+            ->where('project_id', $projectId)
+            ->get(['id', 'name']);
 
         $banks = Bank::query()
             ->activeAccounts()
@@ -39,6 +44,7 @@ class PosController extends Controller
             ->values();
 
         return Inertia::render('Pos/Pos', [
+            'warehouses' => $warehouses,
             'banks' => $banks,
             'tags' => $tags,
             'pointSettings' => [
@@ -58,9 +64,13 @@ class PosController extends Controller
     {
         $order = $checkoutService->execute($request->validated(), $request->user());
 
+        $loadedOrder = $order->load(['details.product', 'payments.bankDestination']);
+
         return back()->with([
             'success' => "Transaksi {$order->order_id} sukses!",
-            'completeOrder' => $order->load(['details.product', 'payments.bankDestination']),
+            'completeOrder' => $loadedOrder,
+            'completedOrder' => $loadedOrder,
+            'created_order_id' => $order->order_id,
         ]);
     }
 
