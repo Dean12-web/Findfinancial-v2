@@ -11,9 +11,11 @@ use App\Models\Setting\FormatTransaction;
 use App\Models\Setting\OtherSetting;
 use App\Models\Transaction\StoreOrder;
 use App\Models\Transaction\ViewStoreOrder;
+use App\Services\BalanceService;
 use App\Services\InvoiceCheckoutService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -238,5 +240,54 @@ class InvoiceController extends Controller
             ->route('invoice')
             ->with('success', "Transaksi {$order->order_id} berhasil dilakukan")
             ->with('created_order_id', $order->order_id);
+    }
+
+    public function destroy(Request $request, string $order_id, BalanceService $balanceService): RedirectResponse
+    {
+        $user = $request->user();
+
+        if (!$user->isSuperadmin() && (!$user->limitationAccess || !$user->limitationAccess->canAccess('delete_invoice'))) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus faktur penjualan.');
+        }
+
+        $order = StoreOrder::query()
+            ->forUser($user)
+            ->where('order_id', $order_id)
+            ->first();
+
+        if (!$order) {
+            return redirect()->route('invoice')->with('error', 'Faktur tidak ditemukan atau tidak dapat diakses.');
+        }
+
+        DB::transaction(function () use ($order, $order_id, $balanceService) {
+            $bankIds = DB::table('tb_cash_transaction')
+                ->where('order_id', $order_id)
+                ->whereNotNull('id_bank')
+                ->where('id_bank', '>', 0)
+                ->pluck('id_bank')
+                ->unique()
+                ->toArray();
+
+            $customerId = (int) ($order->customer_id ?? 0);
+
+            DB::table('tb_store_order')->where('order_id', $order_id)->delete();
+            DB::table('tb_store_order_detail')->where('store_order_id', $order_id)->delete();
+            DB::table('tb_store_order_payment')->where('store_order_id', $order_id)->delete();
+            DB::table('tb_product_stock')->where('order_id', $order_id)->delete();
+            DB::table('tb_cash_transaction')->where('order_id', $order_id)->delete();
+            DB::table('tb_deposit_transaction')->where('order_id', $order_id)->delete();
+            DB::table('tb_trx_point')->where('transid', $order_id)->delete();
+
+            if ($customerId > 0) {
+                $balanceService->syncCustomerPoints($customerId);
+                $balanceService->syncCustomerDeposit($customerId);
+            }
+
+            foreach ($bankIds as $bId) {
+                $balanceService->syncBankBalance((int) $bId);
+            }
+        });
+
+        return redirect()->route('invoice')->with('success', "Faktur #{$order_id} berhasil dihapus.");
     }
 }

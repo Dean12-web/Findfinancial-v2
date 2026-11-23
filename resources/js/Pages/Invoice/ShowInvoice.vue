@@ -1,7 +1,9 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, usePage, router } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import Swal from 'sweetalert2';
+import { notifyError } from '@/Utils/sweetalert';
 import {
     CircleDollarSign,
     ChevronRight,
@@ -144,6 +146,27 @@ const printThermalReceipt = () => {
 const printDeliveryNote = () => {
     isPrintOpen.value = false;
     window.open(route('invoice.delivery-note', props.invoice.order_id), '_blank');
+};
+
+const deleteData = (orderId) => {
+    Swal.fire({
+        title: 'Hapus Faktur Penjualan?',
+        text: `Apakah Anda yakin ingin menghapus faktur #${orderId}? Data yang dihapus tidak dapat dikembalikan.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e11d48',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            router.delete(route('invoice.destroy', orderId), {
+                onError: () => {
+                    notifyError('Gagal menghapus faktur penjualan.');
+                }
+            });
+        }
+    });
 };
 
 onMounted(() => {
@@ -691,22 +714,36 @@ onUnmounted(() => {
                 </div>
 
                 <!-- Secondary Actions (Right) -->
-                <div class="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
-                    <!-- Edit Button -->
-                    <button v-if="can('edit_invoice')"
-                        class="inline-flex items-center justify-center gap-1.5 px-5 py-2 text-xs font-semibold text-white bg-[#ff5500] hover:bg-[#ea4e00] rounded-lg shadow-xs transition-all active:scale-[0.98] cursor-pointer"
-                        type="button">
-                        <Edit class="w-3.5 h-3.5 shrink-0" />
-                        <span>Ubah</span>
-                    </button>
+                <div v-if="user" class="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
+                    <!-- Superadmin: Ubah (target _blank) lalu Hapus -->
+                    <template v-if="user.role_user === 'superadmin'">
+                        <a :href="route('invoice.edit', { no_transaction: invoice.order_id })" target="_blank"
+                            class="inline-flex items-center justify-center gap-1.5 px-5 py-2 text-xs font-semibold text-white bg-[#ff5500] hover:bg-[#ea4e00] rounded-lg shadow-xs transition-all active:scale-[0.98] cursor-pointer">
+                            <Edit class="w-3.5 h-3.5 shrink-0" />
+                            <span>Ubah</span>
+                        </a>
+                        <button @click="deleteData(invoice.order_id)"
+                            class="inline-flex items-center justify-center gap-1.5 px-5 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-xs transition-all active:scale-[0.98] cursor-pointer"
+                            type="button">
+                            <Trash2 class="w-3.5 h-3.5 shrink-0" />
+                            <span>Hapus</span>
+                        </button>
+                    </template>
 
-                    <!-- Delete Button -->
-                    <button v-if="can('delete_invoice')"
-                        class="inline-flex items-center justify-center gap-1.5 px-5 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-xs transition-all active:scale-[0.98] cursor-pointer"
-                        type="button">
-                        <Trash2 class="w-3.5 h-3.5 shrink-0" />
-                        <span>Hapus</span>
-                    </button>
+                    <!-- Non-Superadmin: Hapus dulu (jika allow) lalu Ubah (jika allow) -->
+                    <template v-else>
+                        <button v-if="can('delete_invoice')" @click="deleteData(invoice.order_id)"
+                            class="inline-flex items-center justify-center gap-1.5 px-5 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-xs transition-all active:scale-[0.98] cursor-pointer"
+                            type="button">
+                            <Trash2 class="w-3.5 h-3.5 shrink-0" />
+                            <span>Hapus</span>
+                        </button>
+                        <a v-if="can('edit_invoice')" :href="route('invoice.edit', { no_transaction: invoice.order_id })" target="_blank"
+                            class="inline-flex items-center justify-center gap-1.5 px-5 py-2 text-xs font-semibold text-white bg-[#ff5500] hover:bg-[#ea4e00] rounded-lg shadow-xs transition-all active:scale-[0.98] cursor-pointer">
+                            <Edit class="w-3.5 h-3.5 shrink-0" />
+                            <span>Ubah</span>
+                        </a>
+                    </template>
                 </div>
             </footer>
             <!-- END: BottomActionBar -->

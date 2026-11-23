@@ -26,6 +26,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/invoice', [InvoiceController::class, 'index'])->name('invoice');
 
         Route::get('/invoice/new', [InvoiceController::class, 'create'])->name('invoice.new');
+        Route::get('/edit-invoice', [InvoiceController::class, 'create'])->name('invoice.edit');
         Route::post('/invoice', [InvoiceController::class, 'store'])->name('invoice.store');
 
         Route::get('/invoice/lookup/buyers', [InvoiceLookupController::class, 'buyers'])->name('invoice.lookup.buyers');
@@ -34,6 +35,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/invoice/{order_id}', [InvoiceController::class, 'show'])->name('invoice.show');
         Route::get('/invoice/{order_id}/print', [InvoiceController::class, 'print'])->name('invoice.print');
         Route::get('/invoice/{order_id}/delivery-note', [InvoiceController::class, 'deliveryNote'])->name('invoice.delivery-note');
+        Route::delete('/invoice/{order_id}', [InvoiceController::class, 'destroy'])->name('invoice.destroy');
 
         Route::post('/format-transactions', [FormatTransactionController::class, 'store'])->name('format-transactions.store');
         Route::delete('/format-transactions/{formatTransaction}', [FormatTransactionController::class, 'destroy'])->name('format-transactions.destroy');
