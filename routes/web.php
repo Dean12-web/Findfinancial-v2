@@ -6,6 +6,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\Invoice\FormatTransactionController;
 use App\Http\Controllers\Invoice\InvoiceController;
 use App\Http\Controllers\Invoice\InvoiceLookupController;
+use App\Http\Controllers\Invoice\InvoicePaymentController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Middleware\EnsureUserHasInvoiceAccess;
@@ -36,6 +37,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/invoice/{order_id}/print', [InvoiceController::class, 'print'])->name('invoice.print');
         Route::get('/invoice/{order_id}/delivery-note', [InvoiceController::class, 'deliveryNote'])->name('invoice.delivery-note');
         Route::delete('/invoice/{order_id}', [InvoiceController::class, 'destroy'])->name('invoice.destroy');
+        Route::delete('/invoice-payments/{payment}', [InvoicePaymentController::class, 'destroy'])->name('invoice.payment.destroy');
 
         Route::post('/format-transactions', [FormatTransactionController::class, 'store'])->name('format-transactions.store');
         Route::delete('/format-transactions/{formatTransaction}', [FormatTransactionController::class, 'destroy'])->name('format-transactions.destroy');

@@ -3,7 +3,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head, Link, usePage, router } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import Swal from 'sweetalert2';
-import { notifyError } from '@/Utils/sweetalert';
+import { notifySuccess, notifyError } from '@/Utils/sweetalert';
 import {
     CircleDollarSign,
     ChevronRight,
@@ -163,6 +163,31 @@ const deleteData = (orderId) => {
             router.delete(route('invoice.destroy', orderId), {
                 onError: () => {
                     notifyError('Gagal menghapus faktur penjualan.');
+                }
+            });
+        }
+    });
+};
+
+const deletePayment = (paymentId) => {
+    Swal.fire({
+        title: 'Hapus Pembayaran?',
+        text: 'Apakah Anda yakin ingin menghapus data pembayaran ini? Tindakan ini akan memperbarui status dan sisa tagihan faktur.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e11d48',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            router.delete(route('invoice.payment.destroy', paymentId), {
+                preserveScroll: true,
+                onSuccess: () => {
+                    notifySuccess('Pembayaran berhasil dihapus.');
+                },
+                onError: () => {
+                    notifyError('Gagal menghapus data pembayaran.');
                 }
             });
         }
@@ -576,6 +601,7 @@ onUnmounted(() => {
                                     </td>
                                     <td class="py-3.5 px-4">
                                         <button v-if="can('delete_approve_payment')"
+                                            @click="deletePayment(payment.id)"
                                             class="inline-flex items-center justify-center gap-1.5 px-5 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-xs transition-all active:scale-[0.98] cursor-pointer"
                                             type="button">
                                             <Trash2 class="w-3.5 h-3.5 shrink-0" />
