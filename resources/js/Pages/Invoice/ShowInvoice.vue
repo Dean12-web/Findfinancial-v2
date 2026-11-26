@@ -225,7 +225,7 @@ onUnmounted(() => {
                     </Link>
                     <ChevronRight class="w-3 h-3 text-slate-400 dark:text-slate-600" />
                     <span class="font-semibold text-slate-800 dark:text-slate-200 font-mono">#{{ invoice.order_id
-                    }}</span>
+                        }}</span>
                 </div>
             </div>
 
@@ -363,7 +363,7 @@ onUnmounted(() => {
                                 class="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-[#232731]">
                                 <span class="font-semibold text-slate-500 dark:text-slate-400">No Transaksi</span>
                                 <span class="text-slate-900 dark:text-white font-bold font-mono">#{{ invoice.order_id
-                                }}</span>
+                                    }}</span>
                             </div>
                             <div
                                 class="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-[#232731]">
@@ -435,7 +435,7 @@ onUnmounted(() => {
                                     <td class="py-3.5 px-4 text-center font-mono text-slate-500">
                                         <span v-if="!item.discount || Number(item.discount) === 0">-</span>
                                         <span v-else-if="Number(item.discount) > 100">{{ formatRupiah(item.discount)
-                                        }}</span>
+                                            }}</span>
                                         <span v-else>{{ item.discount }}%</span>
                                     </td>
                                     <td
@@ -600,8 +600,7 @@ onUnmounted(() => {
                                         {{ formatRupiah(payment.amount) }}
                                     </td>
                                     <td class="py-3.5 px-4">
-                                        <button v-if="can('delete_approve_payment')"
-                                            @click="deletePayment(payment.id)"
+                                        <button v-if="can('delete_approve_payment')" @click="deletePayment(payment.id)"
                                             class="inline-flex items-center justify-center gap-1.5 px-5 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-xs transition-all active:scale-[0.98] cursor-pointer"
                                             type="button">
                                             <Trash2 class="w-3.5 h-3.5 shrink-0" />
@@ -728,12 +727,14 @@ onUnmounted(() => {
                                     <LucideSkipBack class="w-4 h-4 text-[#25D366] shrink-0" />
                                     <span>Retur Penjualan</span>
                                 </button>
-                                <!-- Kirim WhatsApp -->
-                                <button @click="isActionOpen = false" type="button"
+                                <!-- Terima Pembayaran -->
+                                <Link v-if="invoice.status !== 'PAID'"
+                                    :href="route('invoice.accept-payment', { no_transaction: invoice.order_id })"
+                                    @click="isActionOpen = false"
                                     class="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-[#232731] transition-colors cursor-pointer">
                                     <BadgeDollarSign class="w-4 h-4 text-yellow-500 shrink-0" />
                                     <span>Terima Pembayaran</span>
-                                </button>
+                                </Link>
                             </div>
                         </div>
                     </div>
@@ -764,7 +765,8 @@ onUnmounted(() => {
                             <Trash2 class="w-3.5 h-3.5 shrink-0" />
                             <span>Hapus</span>
                         </button>
-                        <a v-if="can('edit_invoice')" :href="route('invoice.edit', { no_transaction: invoice.order_id })" target="_blank"
+                        <a v-if="can('edit_invoice')"
+                            :href="route('invoice.edit', { no_transaction: invoice.order_id })" target="_blank"
                             class="inline-flex items-center justify-center gap-1.5 px-5 py-2 text-xs font-semibold text-white bg-[#ff5500] hover:bg-[#ea4e00] rounded-lg shadow-xs transition-all active:scale-[0.98] cursor-pointer">
                             <Edit class="w-3.5 h-3.5 shrink-0" />
                             <span>Ubah</span>

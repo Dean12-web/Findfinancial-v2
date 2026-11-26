@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\Invoice\AcceptPaymentController;
 use App\Http\Controllers\Invoice\FormatTransactionController;
 use App\Http\Controllers\Invoice\InvoiceController;
 use App\Http\Controllers\Invoice\InvoiceLookupController;
@@ -27,6 +28,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/invoice', [InvoiceController::class, 'index'])->name('invoice');
 
         Route::get('/invoice/new', [InvoiceController::class, 'create'])->name('invoice.new');
+        Route::get('/invoice/accept-payment', [AcceptPaymentController::class, 'create'])->name('invoice.accept-payment');
+        Route::post('/invoice/accept-payment', [AcceptPaymentController::class, 'store'])->name('invoice.accept-payment.store');
         Route::get('/edit-invoice', [InvoiceController::class, 'create'])->name('invoice.edit');
         Route::post('/invoice', [InvoiceController::class, 'store'])->name('invoice.store');
 
@@ -38,6 +41,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/invoice/{order_id}/delivery-note', [InvoiceController::class, 'deliveryNote'])->name('invoice.delivery-note');
         Route::delete('/invoice/{order_id}', [InvoiceController::class, 'destroy'])->name('invoice.destroy');
         Route::delete('/invoice-payments/{payment}', [InvoicePaymentController::class, 'destroy'])->name('invoice.payment.destroy');
+
 
         Route::post('/format-transactions', [FormatTransactionController::class, 'store'])->name('format-transactions.store');
         Route::delete('/format-transactions/{formatTransaction}', [FormatTransactionController::class, 'destroy'])->name('format-transactions.destroy');

@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Terima Pembayaran | FindFinancial</title>
+
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+
+    <!-- Tailwind CSS v3 with Forms Plugin -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        primary: {
+                            DEFAULT: '#ff5500',
+                            50: '#fff5f0',
+                            100: '#ffe8dc',
+                            200: '#ffd2be',
+                            300: '#ffb292',
+                            400: '#ff8654',
+                            500: '#ff5500',
+                            600: '#ea4e00',
+                            700: '#c23e00',
+                            800: '#9b3300',
+                            900: '#7c2c04',
+                        },
+                        secondary: {
+                            DEFAULT: '#00e599',
+                            50: '#e6fcf5',
+                            100: '#ccf9eb',
+                            200: '#99f3d7',
+                            300: '#66edc3',
+                            400: '#33e7af',
+                            500: '#00e599',
+                            600: '#00cc88',
+                            700: '#00a36d',
+                            800: '#007a52',
+                            900: '#005237',
+                        },
+                        tertiary: {
+                            DEFAULT: '#ffb800',
+                            50: '#fffbf0',
+                            100: '#fff6db',
+                            200: '#ffecb8',
+                            300: '#ffe294',
+                            400: '#ffd24d',
+                            500: '#ffb800',
+                            600: '#e6a600',
+                            700: '#b88500',
+                            800: '#8f6700',
+                            900: '#705100',
+                        },
+                        neutral: {
+                            DEFAULT: '#0f1115',
+                            50: '#f8f9fa',
+                            100: '#f1f3f5',
+                            200: '#e9ecef',
+                            300: '#dee2e6',
+                            400: '#ced4da',
+                            500: '#8c939d',
+                            600: '#5c636e',
+                            700: '#383e48',
+                            800: '#232731',
+                            850: '#1c2027',
+                            900: '#16191f',
+                            950: '#0f1115',
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+
+    <!-- Custom Styling matching FindFinancial System -->
+    <style data-purpose="findfinancial-base">
+        ::selection {
+            background-color: #ff5500;
+            color: #ffffff;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .font-mono-num {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Focus rings matching FindFinancial Orange Theme */
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none !important;
+            border-color: #ff5500 !important;
+            box-shadow: 0 0 0 2px rgba(255, 85, 0, 0.2) !important;
+        }
+
+        /* Hide number spin arrows for currency inputs */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-slate-50 dark:bg-[#0f1115] text-slate-800 dark:text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-[#ff5500] selection:text-white transition-colors duration-200">
+
+    <!-- BEGIN: TopHeader (FindFinancial Navbar Style) -->
+    <header class="h-16 bg-[#ff5500] text-white sticky top-0 z-30 border-b border-[#ea4e00] shadow-md"
+        data-purpose="page-header">
+        <div class="max-w-[1360px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+            <!-- Left: Sidebar Toggle, Brand & Title -->
+            <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+                <button
+                    class="p-2 rounded-lg text-white/90 hover:text-white hover:bg-white/15 transition-colors shrink-0 focus:outline-none cursor-pointer"
+                    title="Kembali ke Faktur Penjualan" type="button" onclick="history.back()">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="2.2"></path>
+                    </svg>
+                </button>
+                <div class="flex items-center gap-2.5 flex-wrap">
+                    <span class="text-xs font-bold uppercase tracking-wider text-white/80">FindFinancial</span>
+                    <span class="text-white/40 font-light text-sm">/</span>
+                    <h1 class="text-base sm:text-lg font-bold text-white tracking-tight">Terima Pembayaran</h1>
+                    <span
+                        class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-white/15 text-white border border-white/25">
+                        Pelunasan Piutang
+                    </span>
+                </div>
+            </div>
+
+            <!-- Right: Status Kasir, Theme Toggle & Action -->
+            <div class="flex items-center gap-2 sm:gap-3 shrink-0 text-xs">
+                <!-- Status Kasir -->
+                <div
+                    class="hidden md:flex items-center gap-2 bg-black/15 px-3 py-1.5 rounded-lg border border-white/15 text-white/95">
+                    <span class="w-2 h-2 rounded-full bg-[#00e599] ring-2 ring-[#00e599]/30"></span>
+                    <span>Kasir: <strong class="font-semibold text-white">Kassa Utama (Admin-01)</strong></span>
+                </div>
+
+                <!-- Theme Toggle Button (Light/Dark Mode) -->
+                <button id="themeToggleBtn" type="button"
+                    class="h-9 w-9 flex items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors cursor-pointer shrink-0 shadow-xs focus:outline-none"
+                    title="Beralih Tema (Light/Dark)">
+                    <!-- Sun Icon (when dark) -->
+                    <svg id="sunIcon" class="w-4 h-4 text-yellow-300 hidden" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                            stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                    </svg>
+                    <!-- Moon Icon (when light) -->
+                    <svg id="moonIcon" class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path
+                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                            stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                    </svg>
+                </button>
+
+                <!-- Tombol Penerimaan Baru -->
+                <button
+                    class="hidden xs:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-[#ff5500] hover:bg-white/90 font-semibold transition-colors shadow-xs"
+                    type="button">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 6v6m0 0v6m0-6h6m-6 0H6" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="2.2"></path>
+                    </svg>
+                    <span>Baru</span>
+                </button>
+            </div>
+        </div>
+    </header>
+    <!-- END: TopHeader -->
+
+    <!-- BEGIN: BreadcrumbBar -->
+    <section class="border-b border-slate-200 dark:border-[#232731] bg-white dark:bg-[#16191f] transition-colors"
+        data-purpose="breadcrumbs">
+        <div class="max-w-[1360px] mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between text-xs">
+            <nav aria-label="Breadcrumb" class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                <a class="hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1.5"
+                    href="#">
+                    <svg class="w-3.5 h-3.5 text-[#ff5500]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                    </svg>
+                    <span>Penjualan</span>
+                </a>
+                <svg class="w-3 h-3 text-slate-400 dark:text-slate-600" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                </svg>
+                <a class="hover:text-slate-900 dark:hover:text-white transition-colors" href="#">
+                    Faktur Penjualan
+                </a>
+                <svg class="w-3 h-3 text-slate-400 dark:text-slate-600" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                </svg>
+                <span class="font-semibold text-slate-800 dark:text-slate-200 font-mono-num">#83594</span>
+            </nav>
+            <div class="text-[11px] text-slate-400 dark:text-slate-500 hidden sm:block font-mono-num">
+                Faktur No. #83594 • Tanggal Input: 24 Nov 2026
+            </div>
+        </div>
+    </section>
+    <!-- END: BreadcrumbBar -->
+
+    <!-- BEGIN: MainPaymentWorkspace -->
+    <main class="flex-1 py-6">
+        <div class="max-w-[1360px] mx-auto px-4 sm:px-6">
+
+            <!-- Primary Transaction Card (FindFinancial Card Style) -->
+            <div class="bg-white dark:bg-[#16191f] rounded-xl border border-slate-200 dark:border-[#232731] shadow-xs overflow-hidden transition-colors"
+                data-purpose="payment-form-card">
+
+                <!-- BEGIN: CardTopSection (Customer, Target Bank & Grand Total) -->
+                <div class="p-5 sm:p-6 lg:p-8 border-b border-slate-200 dark:border-[#232731]">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        <!-- Left Info Area (Customer & Deposit Account) -->
+                        <div class="lg:col-span-8 space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <!-- Pelanggan Field -->
+                                <div>
+                                    <div
+                                        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                                        <span>Pelanggan / Toko</span>
+                                        <span class="text-[#ff5500]">*</span>
+                                    </div>
+                                    <div
+                                        class="flex items-center space-x-3 p-2.5 rounded-lg border border-slate-200 dark:border-[#232731] bg-slate-50/70 dark:bg-[#1c2027] hover:border-slate-300 dark:hover:border-[#2e3340] transition-colors">
+                                        <div
+                                            class="w-9 h-9 rounded-lg bg-[#ff5500]/10 text-[#ff5500] font-bold flex items-center justify-center text-xs ring-1 ring-[#ff5500]/25 shrink-0">
+                                            FM
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div
+                                                class="text-sm font-bold text-slate-900 dark:text-white truncate tracking-tight">
+                                                fitri mst
+                                            </div>
+                                            <div
+                                                class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-[#00e599]"></span>
+                                                <span>Toko Rekanan • Terverifikasi</span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            class="text-xs text-[#ff5500] hover:text-[#ea4e00] font-semibold px-2 py-1 hover:bg-[#ff5500]/10 rounded transition-colors"
+                                            type="button">
+                                            Ganti
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Setor Ke Field -->
+                                <div>
+                                    <div
+                                        class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                                        <span>Setor Ke (Kas / Bank)</span>
+                                        <span class="text-[#ff5500]">*</span>
+                                    </div>
+                                    <div class="relative">
+                                        <select
+                                            class="block w-full rounded-lg border-slate-200 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] text-sm text-slate-800 dark:text-slate-100 py-2.5 pl-3.5 pr-10 focus:border-[#ff5500] focus:ring-1 focus:ring-[#ff5500] shadow-2xs font-medium cursor-pointer transition-colors"
+                                            id="setor_ke" name="setor_ke">
+                                            <option value="" disabled>Pilih Rekening Tujuan</option>
+                                            <option value="bca" selected>Bank BCA - 822.019.2819 (Rekening Operasional)</option>
+                                            <option value="bri">Bank BRI - 0341.01.002819.53.1 (Kas Utama)</option>
+                                            <option value="mandiri">Bank Mandiri - 141.00.998120.3 (Giro)</option>
+                                            <option value="kas">Kas Tunai Toko / Laci Kasir</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Transaction Date, Tags, and Transaction Number Row -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 pt-1">
+                                <!-- Tgl Transaksi -->
+                                <div>
+                                    <label
+                                        class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5"
+                                        for="tgl_transaksi">
+                                        Tgl Transaksi
+                                    </label>
+                                    <div class="relative rounded-lg shadow-2xs">
+                                        <input
+                                            class="block w-full rounded-lg border-slate-200 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] text-sm text-slate-800 dark:text-slate-100 pl-3.5 pr-10 py-2.5 font-mono-num font-medium transition-colors"
+                                            id="tgl_transaksi" name="tgl_transaksi" type="text" value="2026-11-24" />
+                                        <div
+                                            class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path
+                                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                                    stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                                                </path>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tag -->
+                                <div>
+                                    <label
+                                        class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5"
+                                        for="tag_input">
+                                        Tag
+                                    </label>
+                                    <input
+                                        class="block w-full rounded-lg border-slate-200 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] text-sm text-slate-800 dark:text-slate-100 px-3.5 py-2.5 placeholder-slate-400 dark:placeholder-slate-500 shadow-2xs transition-colors"
+                                        id="tag_input" name="tag" placeholder="Misal: pelunasan-toko" type="text"
+                                        value="pelunasan-toko" />
+                                </div>
+
+                                <!-- No Transaksi -->
+                                <div>
+                                    <div class="flex items-center justify-between mb-1.5">
+                                        <label
+                                            class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+                                            for="no_transaksi">
+                                            No Transaksi
+                                        </label>
+                                        <button
+                                            class="text-[#ff5500] hover:text-[#ea4e00] inline-flex items-center text-xs"
+                                            title="Pengaturan Penomoran Otomatis" type="button">
+                                            <svg class="w-3.5 h-3.5 text-[#ff5500]" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path
+                                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                                                    stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                                                </path>
+                                                <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round"
+                                                    stroke-linejoin="round" stroke-width="2"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <input
+                                        class="block w-full rounded-lg border-slate-200 dark:border-[#2e3340] bg-slate-50 dark:bg-[#1c2027]/70 text-sm text-slate-600 dark:text-slate-300 px-3.5 py-2.5 placeholder-slate-400 font-mono-num transition-colors"
+                                        id="no_transaksi" name="no_transaksi" placeholder="[Auto]" type="text"
+                                        value="[Auto]" readonly />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Area: Prominent Total Display (FindFinancial Style) -->
+                        <div class="lg:col-span-4 flex flex-col justify-start lg:items-end pt-2 lg:pt-0">
+                            <div class="text-left lg:text-right w-full">
+                                <span
+                                    class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+                                    Total Tagihan Terpilih
+                                </span>
+                                <div
+                                    class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white font-mono-num">
+                                    Rp 8.310.000
+                                </div>
+                                <div class="mt-2.5 flex items-center lg:justify-end gap-2 flex-wrap">
+                                    <span
+                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold tracking-wide uppercase bg-amber-500/10 text-amber-700 dark:text-[#ffb800] border border-amber-500/30">
+                                        <svg class="w-3.5 h-3.5 text-amber-600 dark:text-[#ffb800]" fill="none"
+                                            stroke="currentColor" viewBox="0 0 24 24">
+                                            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round"
+                                                stroke-linejoin="round" stroke-width="2"></path>
+                                        </svg>
+                                        Jatuh tempo dalam 25 hari
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- END: CardTopSection -->
+
+                <!-- BEGIN: InvoiceTableSection -->
+                <div class="p-5 sm:p-6 lg:p-8" data-purpose="invoice-lines-table">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-200 dark:divide-[#232731] text-left">
+                            <thead>
+                                <tr class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                                    <th class="py-3 px-3 text-left" scope="col">No. Transaksi</th>
+                                    <th class="py-3 px-4 text-left" scope="col">Tanggal Jatuh Tempo</th>
+                                    <th class="py-3 px-4 text-right" scope="col">Total</th>
+                                    <th class="py-3 px-4 text-right" scope="col">Sisa Tagihan</th>
+                                    <th class="py-3 px-4 text-right w-64" scope="col">Jumlah Bayar</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-[#232731] text-sm">
+                                <!-- Transaction Row 1 -->
+                                <tr class="hover:bg-slate-50/70 dark:hover:bg-[#1c2027]/50 transition-colors group">
+                                    <!-- Transaction ID Link -->
+                                    <td class="py-4 px-3 whitespace-nowrap">
+                                        <div class="flex items-center space-x-2.5">
+                                            <input checked="" id="check_invoice"
+                                                class="rounded border-slate-300 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] text-[#ff5500] focus:ring-[#ff5500] h-4 w-4 cursor-pointer"
+                                                type="checkbox" />
+                                            <a class="font-bold text-[#ff5500] hover:text-[#ea4e00] hover:underline flex items-center font-mono-num"
+                                                href="#">
+                                                #83594
+                                                <svg class="w-3.5 h-3.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path
+                                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                                        stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                                                    </path>
+                                                </svg>
+                                            </a>
+                                        </div>
+                                    </td>
+                                    <!-- Due Date -->
+                                    <td class="py-4 px-4 whitespace-nowrap text-slate-700 dark:text-slate-300 font-mono-num text-xs">
+                                        2026-12-19
+                                    </td>
+                                    <!-- Total Invoice Value -->
+                                    <td
+                                        class="py-4 px-4 whitespace-nowrap text-right text-slate-800 dark:text-slate-200 font-mono-num font-semibold">
+                                        8.310.000
+                                    </td>
+                                    <!-- Remaining Balance (Sisa Tagihan) -->
+                                    <td class="py-4 px-4 whitespace-nowrap text-right font-mono-num">
+                                        <span class="font-bold text-slate-900 dark:text-white">6.310.000</span>
+                                        <div class="text-[11px] text-slate-400 dark:text-slate-500 font-sans">
+                                            Sebagian telah dibayar
+                                        </div>
+                                    </td>
+                                    <!-- Payment Amount Allocation Input -->
+                                    <td class="py-4 px-4 whitespace-nowrap text-right">
+                                        <div class="relative flex items-center justify-end">
+                                            <input
+                                                class="w-48 text-right rounded-lg border-slate-300 dark:border-[#2e3340] py-2 px-3 text-sm font-bold text-slate-900 dark:text-white bg-slate-50 dark:bg-[#1c2027] focus:bg-white dark:focus:bg-[#16191f] focus:border-[#ff5500] focus:ring-1 focus:ring-[#ff5500] font-mono-num shadow-2xs transition-colors"
+                                                id="allocation_amount" name="allocation_amount" placeholder="0"
+                                                type="text" value="6.310.000" />
+                                        </div>
+                                        <div class="flex justify-end gap-1.5 mt-1.5">
+                                            <button id="payFullBtn"
+                                                class="text-[11px] text-[#ff5500] hover:text-[#ea4e00] font-semibold hover:underline cursor-pointer"
+                                                type="button">
+                                                Bayar Penuh
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Kembalian / Change Indicator -->
+                    <div class="flex justify-end pt-4 pb-2 border-t border-slate-100 dark:border-[#232731]">
+                        <div class="text-right text-xs text-slate-500 dark:text-slate-400">
+                            <span class="mr-3 font-semibold text-slate-700 dark:text-slate-300">Kembalian:</span>
+                            <span id="changeDisplay"
+                                class="font-mono-num font-bold text-slate-900 dark:text-white text-sm">Rp 0</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- END: InvoiceTableSection -->
+
+                <!-- BEGIN: MemoAndExecutionFooter -->
+                <div class="p-5 sm:p-6 lg:p-8 bg-slate-50/70 dark:bg-[#1c2027]/40 border-t border-slate-200 dark:border-[#232731]">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
+                        <!-- Memo Input Area -->
+                        <div class="lg:col-span-7">
+                            <label
+                                class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-2"
+                                for="memo_textarea">
+                                Memo / Keterangan Pembayaran
+                            </label>
+                            <textarea
+                                class="block w-full rounded-lg border-slate-200 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] p-3 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-[#ff5500] focus:ring-1 focus:ring-[#ff5500] shadow-2xs resize-y transition-colors"
+                                id="memo_textarea" name="memo"
+                                placeholder="Tambahkan catatan khusus, nomor referensi bukti transfer bank, atau keterangan kasir..."
+                                rows="3"></textarea>
+                            <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">
+                                Catatan ini akan tersimpan permanen pada audit log penerimaan kas FindFinancial.
+                            </p>
+                        </div>
+
+                        <!-- Action Buttons Area -->
+                        <div class="lg:col-span-5 flex flex-col sm:flex-row items-center justify-end gap-3 pt-3 lg:pt-0">
+                            <button
+                                class="w-full sm:w-auto px-5 py-2.5 rounded-lg border border-slate-300 dark:border-[#2e3340] bg-white dark:bg-[#1c2027] text-slate-700 dark:text-slate-300 text-sm font-semibold hover:bg-slate-100 dark:hover:bg-[#232731] transition-colors shadow-2xs cursor-pointer"
+                                type="button" onclick="history.back()">
+                                Batal
+                            </button>
+                            <button
+                                class="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-6 py-2.5 rounded-lg bg-[#ff5500] text-white text-sm font-semibold hover:bg-[#ea4e00] active:bg-[#c23e00] transition-all shadow-sm shadow-[#ff5500]/25 focus:outline-none focus:ring-2 focus:ring-[#ff5500] focus:ring-offset-2 dark:focus:ring-offset-[#16191f] cursor-pointer"
+                                type="button" id="btnProcessPayment">
+                                <span>Proses Pembayaran</span>
+                                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"
+                                        stroke-width="2.2"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- END: MemoAndExecutionFooter -->
+
+            </div>
+            <!-- End of Form Card -->
+
+            <!-- Secondary Help / Keyboard Shortcut Bar -->
+            <aside aria-label="Shortcut status"
+                class="mt-4 flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-2 gap-2">
+                <div class="flex items-center space-x-3">
+                    <span class="font-medium">Pintasan Cepat:</span>
+                    <span
+                        class="inline-flex items-center gap-1 font-mono-num bg-slate-200 dark:bg-[#232731] text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded text-[11px]">Enter
+                        : Simpan</span>
+                    <span
+                        class="inline-flex items-center gap-1 font-mono-num bg-slate-200 dark:bg-[#232731] text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded text-[11px]">Esc
+                        : Batalkan</span>
+                </div>
+                <div class="text-[11px] font-mono-num">
+                    FindFinancial v2.0 • Keamanan & Audit Terenkripsi
+                </div>
+            </aside>
+        </div>
+    </main>
+    <!-- END: MainPaymentWorkspace -->
+
+    <!-- Interactive Scripts: Theme Toggle, Quick Allocation & Calculation -->
+    <script data-purpose="payment-interaction">
+        document.addEventListener('DOMContentLoaded', () => {
+            const amountInput = document.getElementById('allocation_amount');
+            const payFullBtn = document.getElementById('payFullBtn');
+            const changeDisplay = document.getElementById('changeDisplay');
+            const themeToggleBtn = document.getElementById('themeToggleBtn');
+            const sunIcon = document.getElementById('sunIcon');
+            const moonIcon = document.getElementById('moonIcon');
+            const btnProcessPayment = document.getElementById('btnProcessPayment');
+
+            // Format number to Indonesian format
+            const formatNumber = (num) => {
+                return new Intl.NumberFormat('id-ID').format(num);
+            };
+
+            const parseNumber = (str) => {
+                const cleaned = String(str).replace(/[^\d]/g, '');
+                return parseInt(cleaned, 10) || 0;
+            };
+
+            const outstandingBalance = 6310000;
+
+            const updateChange = () => {
+                const currentVal = parseNumber(amountInput.value);
+                const change = currentVal - outstandingBalance;
+                if (change > 0) {
+                    changeDisplay.textContent = 'Rp ' + formatNumber(change);
+                    changeDisplay.className = 'font-mono-num font-bold text-[#00cc88] dark:text-[#00e599] text-sm';
+                } else {
+                    changeDisplay.textContent = 'Rp 0';
+                    changeDisplay.className = 'font-mono-num font-bold text-slate-900 dark:text-white text-sm';
+                }
+            };
+
+            // Input handlers
+            if (amountInput) {
+                amountInput.addEventListener('focus', function () {
+                    this.select();
+                });
+
+                amountInput.addEventListener('input', function () {
+                    const raw = parseNumber(this.value);
+                    if (raw > 0) {
+                        this.value = formatNumber(raw);
+                    }
+                    updateChange();
+                });
+            }
+
+            if (payFullBtn) {
+                payFullBtn.addEventListener('click', () => {
+                    amountInput.value = formatNumber(outstandingBalance);
+                    updateChange();
+                });
+            }
+
+            if (btnProcessPayment) {
+                btnProcessPayment.addEventListener('click', () => {
+                    const val = parseNumber(amountInput.value);
+                    if (val <= 0) {
+                        alert('Silakan masukkan jumlah pembayaran yang valid.');
+                        return;
+                    }
+                    alert('Pembayaran sebesar Rp ' + formatNumber(val) + ' berhasil diproses.');
+                });
+            }
+
+            // Keyboard shortcut support
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    history.back();
+                } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    btnProcessPayment.click();
+                }
+            });
+
+            // Theme Toggle Logic
+            const updateThemeIcons = () => {
+                const isDark = document.documentElement.classList.contains('dark');
+                if (isDark) {
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
+                } else {
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
+                }
+            };
+
+            // Initial theme setup (load saved or default to dark)
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.documentElement.classList.remove('dark');
+            } else {
+                document.documentElement.classList.add('dark');
+            }
+            updateThemeIcons();
+
+            themeToggleBtn.addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+                const isDark = document.documentElement.classList.contains('dark');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                updateThemeIcons();
+            });
+        });
+    </script>
+</body>
+
+</html>
